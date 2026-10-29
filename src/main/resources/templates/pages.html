@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<!--
+  This one file has two jobs:
+  1. It holds the parts shared by every page (head, menu, footer). The other templates include them
+     with th:replace="~{pages :: name(...)}".
+  2. It shows the simple pages: About, Privacy, Terms and the error page.
+     The controller sets "page" ("about", "privacy", "terms" or "error") and this file shows that content.
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title}">JavaLearn</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<header class="site-header" th:fragment="header(active)">
+    <div class="container header-inner">
+        <a class="brand" th:href="@{/}"><span class="brand-java">Java</span>Learn</a>
+        <nav class="main-nav" aria-label="Main">
+            <a th:href="@{/learn}" th:classappend="${active == 'learn'} ? 'active'">Learn</a>
+            <a th:href="@{/projects}" th:classappend="${active == 'projects'} ? 'active'">Projects</a>
+            <a th:href="@{/about}" th:classappend="${active == 'about'} ? 'active'">About</a>
+        </nav>
+    </div>
+</header>
+
+<th:block th:switch="${page}">
+<main th:case="'about'" class="container page prose">
+    <h1>About JavaLearn</h1>
+
+    <p>
+        JavaLearn is a college Java project. It is a small website that helps beginners learn Java
+        with plain text lessons and then read real Java programs.
+    </p>
+
+    <h2>What is on the website</h2>
+    <ul>
+        <li><a th:href="@{/learn}">Learn</a>: text lessons from the introduction to Java up to JDBC.
+            Each lesson has an explanation, syntax, examples and important points.</li>
+        <li><a th:href="@{/projects}">Projects</a>: Java projects read automatically from a GitHub repository,
+            with their descriptions and full source code.</li>
+    </ul>
+
+    <h2>How the projects section works</h2>
+    <p>
+        GitHub is the source of truth. The Java backend asks the GitHub REST API for the list of files in the
+        <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">repository</a>,
+        finds the project folders, reads each README.md when it exists, and downloads the <code>.java</code> files.
+        Nothing about the projects is typed into this website. If a project has no README, only its folder name
+        and files are shown.
+    </p>
+
+    <h2>Built with</h2>
+    <ul>
+        <li>Java 21</li>
+        <li>Spring Boot and Spring MVC</li>
+        <li>Thymeleaf templates</li>
+        <li>Maven</li>
+        <li>HTML, CSS and a small amount of JavaScript (colours in code blocks)</li>
+        <li>The GitHub REST API</li>
+    </ul>
+</main>
+
+<main th:case="'privacy'" class="container page prose">
+    <h1>Privacy</h1>
+    <p>JavaLearn is a learning project. It is designed to collect as little information as possible.</p>
+
+    <h2>What JavaLearn does not do</h2>
+    <ul>
+        <li>There are no accounts, logins or sign-up forms.</li>
+        <li>The website does not use cookies, analytics or advertising.</li>
+        <li>The website does not ask for your name, email address or any other personal detail.</li>
+    </ul>
+
+    <h2>The project search</h2>
+    <p>
+        The words you type in the project search are sent to the JavaLearn server so it can filter the project list.
+        The application does not store them.
+    </p>
+
+    <h2>GitHub</h2>
+    <p>
+        The JavaLearn server, not your browser, contacts GitHub to read the public project repository.
+        Links such as &ldquo;View on GitHub&rdquo; open github.com, which has its own privacy policy.
+    </p>
+
+    <h2>Server logs</h2>
+    <p>
+        Like any web server, the computer or hosting service that runs JavaLearn may keep normal technical logs
+        (for example the time of a request and the page requested). How long they are kept depends on where the
+        website is hosted.
+    </p>
+</main>
+
+<main th:case="'terms'" class="container page prose">
+    <h1>Terms of use</h1>
+    <p>By using JavaLearn you agree to the simple terms below.</p>
+
+    <h2>Educational use</h2>
+    <p>
+        JavaLearn is made for learning. The lessons are written for beginners and may leave out details.
+        Please check the official Java documentation when you need exact or complete information.
+    </p>
+
+    <h2>No guarantee</h2>
+    <p>
+        The website and its lessons are provided &ldquo;as is&rdquo;, without any promise that they are complete,
+        error-free or always available.
+    </p>
+
+    <h2>Project code</h2>
+    <p>
+        The projects and source code shown in the Projects section are loaded from a GitHub repository.
+        They belong to their authors and are covered by the licence in that repository, not by these terms.
+        Check the repository before you reuse any code.
+    </p>
+
+    <h2>Availability of GitHub content</h2>
+    <p>
+        The Projects section depends on GitHub. If GitHub is unavailable or limits requests,
+        the projects may not load for a while.
+    </p>
+
+    <h2>Changes</h2>
+    <p>These terms may change as the project changes.</p>
+</main>
+
+<main th:case="'error'" class="container page narrow">
+    <!-- errorTitle / errorMessage are set by our controllers; Spring's own 404 and 500 errors use the defaults -->
+    <h1 th:text="${errorTitle ?: 'Page not found'}">Page not found</h1>
+    <p th:text="${errorMessage ?: 'This page does not exist, or something unexpected went wrong.'}">Message.</p>
+    <p class="button-row">
+        <a class="button primary" th:href="@{/}">Go to the home page</a>
+        <a class="button" th:href="@{/learn}">Learn Java</a>
+        <a class="button" th:href="@{/projects}">Java projects</a>
+    </p>
+</main>
+</th:block>
+
+<footer class="site-footer" th:fragment="footer">
+    <div class="container footer-inner">
+        <p>JavaLearn is a college Java project for learning Java.</p>
+        <nav aria-label="Footer">
+            <a th:href="@{/privacy}">Privacy</a>
+            <a th:href="@{/terms}">Terms</a>
+            <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">Projects on GitHub</a>
+        </nav>
+    </div>
+    <script th:src="@{/js/site.js}"></script>
+</footer>
+
+</body>
+</html>

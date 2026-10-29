@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head(${lesson.title + ' - Learn Java - JavaLearn'})}"></head>
+<body>
+<header th:replace="~{pages :: header('learn')}"></header>
+
+<div class="container lesson-layout">
+
+    <!-- Side menu: shown on wide screens only -->
+    <aside class="lesson-menu" aria-label="All lessons">
+        <h2><a th:href="@{/learn}">All lessons</a></h2>
+        <ol>
+            <li th:each="item : ${allLessons}">
+                <a th:href="@{/learn/{slug}(slug=${item.slug})}"
+                   th:text="${item.title}"
+                   th:classappend="${item.slug == lesson.slug} ? 'current'"
+                   th:attr="aria-current=${item.slug == lesson.slug} ? 'page'">Lesson</a>
+            </li>
+        </ol>
+    </aside>
+
+    <article class="lesson">
+        <p class="crumbs">
+            <a th:href="@{/learn}">Learn</a> /
+            <span th:text="${lesson.stage}">Stage</span>
+        </p>
+        <h1 th:text="${lesson.title}">Lesson title</h1>
+        <p class="lesson-summary">
+            Lesson <span th:text="${lesson.number}">1</span> of <span th:text="${#lists.size(allLessons)}">20</span>.
+            <span th:text="${lesson.summary}">Summary.</span>
+        </p>
+
+        <!-- The lesson text is our own HTML stored in Service.java, so th:utext is safe here -->
+        <div class="lesson-body" th:utext="${lesson.content}"></div>
+
+        <nav class="lesson-nav" aria-label="Previous and next lesson">
+            <a class="prev" th:if="${previous != null}" th:href="@{/learn/{slug}(slug=${previous.slug})}">
+                <span class="nav-label">Previous</span>
+                <span th:text="${previous.title}">Previous lesson</span>
+            </a>
+            <a class="next" th:if="${next != null}" th:href="@{/learn/{slug}(slug=${next.slug})}">
+                <span class="nav-label">Next</span>
+                <span th:text="${next.title}">Next lesson</span>
+            </a>
+        </nav>
+    </article>
+</div>
+
+<footer th:replace="~{pages :: footer}"></footer>
+</body>
+</html>

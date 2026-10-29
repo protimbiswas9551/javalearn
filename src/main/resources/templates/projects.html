@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head('Java Projects - JavaLearn')}"></head>
+<body>
+<header th:replace="~{pages :: header('projects')}"></header>
+
+<main class="container page">
+    <h1>Java projects</h1>
+    <p class="page-intro">
+        These projects are read from the
+        <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">GitHub repository</a>
+        every time the list is refreshed. Open a project to read its Java source code.
+    </p>
+
+    <!-- 1. GitHub problem -->
+    <div class="notice error" role="alert" th:if="${errorMessage != null}">
+        <strong>The projects could not be loaded.</strong>
+        <span th:text="${errorMessage}">Error message.</span>
+        <a th:href="@{/projects}">Try again</a>
+    </div>
+
+    <!-- 2. Repository has no projects -->
+    <div class="notice" th:if="${errorMessage == null and totalProjects == 0}">
+        <strong>No Java projects were found in the repository yet.</strong>
+        A project is a folder that contains at least one <code>.java</code> file.
+    </div>
+
+    <!-- 3. Normal case -->
+    <div th:if="${errorMessage == null and totalProjects > 0}">
+
+        <form class="search" method="get" th:action="@{/projects}">
+            <div class="field">
+                <label for="q">Project name</label>
+                <input type="search" id="q" name="q" th:value="${q}" placeholder="For example: calculator">
+            </div>
+            <div class="field" th:if="${!difficulties.isEmpty()}">
+                <label for="difficulty">Difficulty</label>
+                <select id="difficulty" name="difficulty">
+                    <option value="">All levels</option>
+                    <option th:each="level : ${difficulties}"
+                            th:value="${level}"
+                            th:text="${level}"
+                            th:selected="${level.equalsIgnoreCase(selectedDifficulty)}">Beginner</option>
+                </select>
+            </div>
+            <div class="field actions">
+                <button type="submit" class="button primary">Search</button>
+                <a th:if="${!q.isEmpty() or !selectedDifficulty.isEmpty()}" th:href="@{/projects}">Clear</a>
+            </div>
+        </form>
+
+        <p class="result-count">
+            <span th:if="${projects.size() == totalProjects}" th:text="${totalProjects} + ' projects'">10 projects</span>
+            <span th:if="${projects.size() != totalProjects}"
+                  th:text="'Showing ' + ${projects.size()} + ' of ' + ${totalProjects} + ' projects'">Showing 3 of 10 projects</span>
+        </p>
+
+        <div class="notice" th:if="${projects.isEmpty()}">
+            <strong>No projects match your search.</strong> Try a shorter name or clear the filters.
+        </div>
+
+        <div class="card-grid">
+            <article class="card" th:each="project : ${projects}">
+                <h2 class="card-title">
+                    <a th:href="@{/projects/{name}(name=${project.folderName})}" th:text="${project.displayName}">Project name</a>
+                </h2>
+                <p class="card-meta">
+                    <span class="tag" th:if="${project.difficulty != null}" th:text="${project.difficulty}">Beginner</span>
+                    <span th:text="${project.javaFiles.size() == 1 ? '1 Java file' : project.javaFiles.size() + ' Java files'}">2 Java files</span>
+                </p>
+                <p class="card-text" th:if="${project.description != null}" th:text="${project.description}">Description.</p>
+                <p class="card-text muted" th:if="${project.description == null}"
+                   th:text="${project.hasReadme ? 'The README has no description text.' : 'This folder has no README.md.'}">No description.</p>
+            </article>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{pages :: footer}"></footer>
+</body>
+</html>
