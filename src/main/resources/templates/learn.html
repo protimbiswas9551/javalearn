@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head('Learn Java - JavaLearn')}"></head>
+<body>
+<header th:replace="~{pages :: header('learn')}"></header>
+
+<main class="container page">
+    <h1>Learn Java</h1>
+    <p class="page-intro">
+        Text lessons in a suggested order. Start with Java Basics, then move on to
+        object-oriented programming, and finish with the topics for working with data.
+    </p>
+
+    <section class="stage" th:each="stage : ${stages}">
+        <h2 th:text="${stage.key}">Stage</h2>
+        <ul class="lesson-list">
+            <li th:each="lesson : ${stage.value}">
+                <span class="num" th:text="${lesson.number}">1</span>
+                <div>
+                    <a th:href="@{/learn/{slug}(slug=${lesson.slug})}" th:text="${lesson.title}">Lesson title</a>
+                    <p th:text="${lesson.summary}">Short summary.</p>
+                </div>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer th:replace="~{pages :: footer}"></footer>
+</body>
+</html>

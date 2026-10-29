@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head('JavaLearn - Learn Java and read real Java projects')}"></head>
+<body>
+<header th:replace="~{pages :: header('home')}"></header>
+
+<main>
+    <section class="hero">
+        <div class="container hero-grid">
+            <div>
+                <h1>Learn Java step by step, then read real Java projects.</h1>
+                <p class="lead">
+                    JavaLearn is a small learning website. It has text lessons on the core topics of Java,
+                    and a projects section that loads Java programs directly from a GitHub repository,
+                    so you can read the source code of complete programs.
+                </p>
+                <div class="button-row">
+                    <a class="button primary" th:href="@{/learn}">Start Learning</a>
+                    <a class="button" th:href="@{/projects}">Explore Projects</a>
+                </div>
+            </div>
+<pre class="hero-code" aria-label="A small Java program"><code>public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, JavaLearn!");
+    }
+}</code></pre>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <h2>A simple learning path</h2>
+            <p class="section-intro">
+                Follow the lessons in order. Each stage builds on the one before it.
+                Every lesson has an explanation, syntax, examples and a list of important points.
+            </p>
+
+            <div class="path">
+                <div class="path-stage" th:each="stage : ${stages}">
+                    <h3 th:text="${stage.key}">Stage</h3>
+                    <ul class="lesson-list compact">
+                        <li th:each="lesson : ${stage.value}">
+                            <span class="num" th:text="${lesson.number}">1</span>
+                            <a th:href="@{/learn/{slug}(slug=${lesson.slug})}" th:text="${lesson.title}">Lesson</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section alt">
+        <div class="container two-col">
+            <div>
+                <h2>Projects come straight from GitHub</h2>
+                <p>
+                    The project list is not typed into this website. JavaLearn reads the GitHub repository,
+                    finds the project folders, and shows each project's README details and Java source code.
+                    When the repository changes, the website shows the change.
+                </p>
+            </div>
+            <div class="button-row align-end">
+                <a class="button primary" th:href="@{/projects}">Explore Projects</a>
+                <a class="button" th:href="${@service.repoUrl}" target="_blank" rel="noopener">Open the repository</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{pages :: footer}"></footer>
+</body>
+</html>
