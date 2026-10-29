@@ -5,16 +5,18 @@
 <header th:replace="~{pages :: header('learn')}"></header>
 
 <main class="container page">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <h1>Learn Java</h1>
     <p class="page-intro">
         Text lessons in a suggested order. Start with Java Basics, then move on to
         object-oriented programming, and finish with the topics for working with data.
+        Every lesson ends with a quiz. <a th:href="@{/progress}">See your progress</a>.
     </p>
 
     <section class="stage" th:each="stage : ${stages}">
         <h2 th:text="${stage.key}">Stage</h2>
         <ul class="lesson-list">
-            <li th:each="lesson : ${stage.value}">
+            <li th:each="lesson : ${stage.value}" th:attr="data-lesson-slug=${lesson.slug}">
                 <span class="num" th:text="${lesson.number}">1</span>
                 <div>
                     <a th:href="@{/learn/{slug}(slug=${lesson.slug})}" th:text="${lesson.title}">Lesson title</a>
@@ -26,5 +28,6 @@
 </main>
 
 <footer th:replace="~{pages :: footer}"></footer>
+<script th:src="@{/js/learn.js}"></script>
 </body>
 </html>

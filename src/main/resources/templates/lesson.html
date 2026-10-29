@@ -11,7 +11,7 @@
         <h2><a th:href="@{/learn}">All lessons</a></h2>
         <ol>
             <li th:each="item : ${allLessons}">
-                <a th:href="@{/learn/{slug}(slug=${item.slug})}"
+                <a th:href="@{/learn/{slug}(slug=${item.slug})}" th:data-lesson-slug="${item.slug}"
                    th:text="${item.title}"
                    th:classappend="${item.slug == lesson.slug} ? 'current'"
                    th:attr="aria-current=${item.slug == lesson.slug} ? 'page'">Lesson</a>
@@ -20,6 +20,7 @@
     </aside>
 
     <article class="lesson">
+        <nav th:replace="~{pages :: navStrip(@{/learn}, 'Lessons')}"></nav>
         <p class="crumbs">
             <a th:href="@{/learn}">Learn</a> /
             <span th:text="${lesson.stage}">Stage</span>
@@ -32,6 +33,21 @@
 
         <!-- The lesson text is our own HTML stored in Service.java, so th:utext is safe here -->
         <div class="lesson-body" th:utext="${lesson.content}"></div>
+
+        <section class="lesson-done">
+            <button type="button" id="mark-done" class="button primary" th:attr="data-slug=${lesson.slug}" aria-pressed="false">Mark lesson as complete</button>
+            <span id="done-note" class="muted" role="status"></span>
+        </section>
+
+        <!-- Quiz: questions are read from quizzes.json by the server and shown one at a time by learn.js -->
+        <section class="quiz" id="quiz" aria-labelledby="quiz-title" th:attr="data-progress-url=@{/progress}">
+            <h2 id="quiz-title">Quiz: test yourself</h2>
+            <div id="quiz-root">
+                <p class="muted">The quiz needs JavaScript. Please turn it on in your browser.</p>
+            </div>
+            <p class="muted quiz-note">Scores are saved in this browser only.</p>
+        </section>
+        <script type="application/json" id="quiz-data" th:utext="${quizJson}"></script>
 
         <nav class="lesson-nav" aria-label="Previous and next lesson">
             <a class="prev" th:if="${previous != null}" th:href="@{/learn/{slug}(slug=${previous.slug})}">
@@ -47,5 +63,6 @@
 </div>
 
 <footer th:replace="~{pages :: footer}"></footer>
+<script th:src="@{/js/learn.js}"></script>
 </body>
 </html>

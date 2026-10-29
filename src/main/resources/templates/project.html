@@ -5,6 +5,7 @@
 <header th:replace="~{pages :: header('projects')}"></header>
 
 <main class="container page">
+    <nav th:replace="~{pages :: navStrip(@{/projects}, 'Projects')}"></nav>
     <p class="crumbs">
         <a th:href="@{/projects}">Projects</a> /
         <span th:text="${project.displayName}">Project</span>
@@ -16,6 +17,7 @@
         <span class="tag" th:if="${project.difficulty != null}" th:text="${'Difficulty: ' + project.difficulty}">Difficulty: Beginner</span>
         <span th:text="${project.javaFiles.size() == 1 ? '1 Java file' : project.javaFiles.size() + ' Java files'}">2 Java files</span>
         <span>Folder: <code th:text="${project.folderName}">folder</code></span>
+        <span th:if="${project.lastUpdated != null}" th:text="'Updated ' + ${#strings.substring(project.lastUpdated, 0, 10)}">Updated</span>
     </p>
 
     <p><a class="button primary" th:href="${project.githubUrl}" target="_blank" rel="noopener">View on GitHub</a></p>
@@ -34,32 +36,41 @@
         </ul>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="source-files" th:attr="data-project=${project.folderName},data-source-url=@{/projects/{name}/source(name=${project.folderName})}">
         <h2>Java files</h2>
-        <ul class="file-list">
-            <li th:each="file, stat : ${sourceFiles}">
-                <a th:href="'#file-' + ${stat.index}" th:text="${file.name}">Main.java</a>
-            </li>
-        </ul>
-        <p class="muted" th:if="${sourceFiles.size() < project.javaFiles.size()}">
-            Showing the first <span th:text="${sourceFiles.size()}">15</span> of
-            <span th:text="${project.javaFiles.size()}">30</span> Java files.
-            <a th:href="${project.githubUrl}" target="_blank" rel="noopener">See all files on GitHub</a>.
-        </p>
-    </section>
+        <p class="muted">Select a file name to read its complete source code. Several files can be open at once.</p>
 
-    <section class="detail-section">
-        <h2>Source code</h2>
-        <div class="source-file" th:each="file, stat : ${sourceFiles}" th:id="'file-' + ${stat.index}">
-            <div class="source-head">
-                <span class="source-name" th:text="${file.name}">Main.java</span>
-                <a th:href="${file.githubUrl}" target="_blank" rel="noopener">View file on GitHub</a>
-            </div>
-            <pre><code th:text="${file.code}">// source code</code></pre>
+        <div class="button-row file-controls" hidden>
+            <button type="button" class="button" id="expand-all">Expand all</button>
+            <button type="button" class="button" id="collapse-all">Collapse all</button>
         </div>
+
+        <div class="file-group" th:each="group : ${fileGroups}">
+            <h3 class="file-dir" th:text="${group.dir.isEmpty() ? 'Project root' : group.dir + '/'}">src/</h3>
+            <div class="source-file" th:each="file : ${group.files}">
+                <h4 class="source-heading">
+                    <button type="button" class="source-toggle" aria-expanded="false"
+                            th:attr="aria-controls='file-' + ${file.index},data-path=${file.path}">
+                        <span class="chevron" aria-hidden="true">&#9656;</span>
+                        <span class="source-name" th:text="${file.name}">Main.java</span>
+                    </button>
+                </h4>
+                <div class="source-body" th:id="'file-' + ${file.index}" hidden>
+                    <div class="source-head">
+                        <span class="muted" th:text="${file.path}">src/Main.java</span>
+                        <a class="gh-link" href="#" target="_blank" rel="noopener">View file on GitHub</a>
+                    </div>
+                    <p class="muted source-status" role="status">Loading&hellip;</p>
+                    <pre hidden><code></code></pre>
+                </div>
+            </div>
+        </div>
+        <noscript><p class="notice">Reading the code on this page needs JavaScript. You can read every file on
+            <a th:href="${project.githubUrl}">GitHub</a>.</p></noscript>
     </section>
 </main>
 
 <footer th:replace="~{pages :: footer}"></footer>
+<script th:src="@{/js/projects.js}"></script>
 </body>
 </html>

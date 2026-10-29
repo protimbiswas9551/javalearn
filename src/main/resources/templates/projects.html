@@ -5,11 +5,12 @@
 <header th:replace="~{pages :: header('projects')}"></header>
 
 <main class="container page">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <h1>Java projects</h1>
     <p class="page-intro">
         These projects are read from the
         <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">GitHub repository</a>
-        every time the list is refreshed. Open a project to read its Java source code.
+        and the list is refreshed from time to time. Open a project to browse and read all of its Java files.
     </p>
 
     <!-- 1. GitHub problem -->
@@ -28,35 +29,51 @@
     <!-- 3. Normal case -->
     <div th:if="${errorMessage == null and totalProjects > 0}">
 
-        <form class="search" method="get" th:action="@{/projects}">
-            <div class="field">
-                <label for="q">Project name</label>
-                <input type="search" id="q" name="q" th:value="${q}" placeholder="For example: calculator">
+        <!-- A normal GET form: every choice is in the URL, so results can be bookmarked and shared. -->
+        <form class="search" id="project-filters" method="get" th:action="@{/projects}" role="search">
+            <div class="field grow">
+                <label for="q">Search</label>
+                <input type="search" id="q" name="q" th:value="${q}"
+                       placeholder="Name, description, concept or file name">
             </div>
             <div class="field" th:if="${!difficulties.isEmpty()}">
                 <label for="difficulty">Difficulty</label>
                 <select id="difficulty" name="difficulty">
                     <option value="">All levels</option>
-                    <option th:each="level : ${difficulties}"
-                            th:value="${level}"
-                            th:text="${level}"
+                    <option th:each="level : ${difficulties}" th:value="${level}" th:text="${level}"
                             th:selected="${level.equalsIgnoreCase(selectedDifficulty)}">Beginner</option>
                 </select>
             </div>
+            <div class="field" th:if="${!concepts.isEmpty()}">
+                <label for="concept">Concept</label>
+                <select id="concept" name="concept">
+                    <option value="">All concepts</option>
+                    <option th:each="c : ${concepts}" th:value="${c}" th:text="${c}"
+                            th:selected="${c.equalsIgnoreCase(selectedConcept)}">Concept</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="sort">Sort by</label>
+                <select id="sort" name="sort">
+                    <option th:each="o : ${sortOptions}" th:value="${o.key}" th:text="${o.value}"
+                            th:selected="${o.key == sort}">Name</option>
+                </select>
+            </div>
             <div class="field actions">
-                <button type="submit" class="button primary">Search</button>
-                <a th:if="${!q.isEmpty() or !selectedDifficulty.isEmpty()}" th:href="@{/projects}">Clear</a>
+                <button type="submit" class="button primary">Apply</button>
+                <a class="button subtle" th:if="${!q.isEmpty() or !selectedDifficulty.isEmpty() or !selectedConcept.isEmpty() or sort != 'name-asc'}"
+                   th:href="@{/projects}">Reset</a>
             </div>
         </form>
 
-        <p class="result-count">
-            <span th:if="${projects.size() == totalProjects}" th:text="${totalProjects} + ' projects'">10 projects</span>
+        <p class="result-count" role="status" aria-live="polite">
+            <span th:if="${projects.size() == totalProjects}" th:text="${totalProjects} + (${totalProjects == 1} ? ' project' : ' projects')">10 projects</span>
             <span th:if="${projects.size() != totalProjects}"
                   th:text="'Showing ' + ${projects.size()} + ' of ' + ${totalProjects} + ' projects'">Showing 3 of 10 projects</span>
         </p>
 
         <div class="notice" th:if="${projects.isEmpty()}">
-            <strong>No projects match your search.</strong> Try a shorter name or clear the filters.
+            <strong>No projects match.</strong> Try fewer words, or <a th:href="@{/projects}">reset the filters</a>.
         </div>
 
         <div class="card-grid">
@@ -67,15 +84,22 @@
                 <p class="card-meta">
                     <span class="tag" th:if="${project.difficulty != null}" th:text="${project.difficulty}">Beginner</span>
                     <span th:text="${project.javaFiles.size() == 1 ? '1 Java file' : project.javaFiles.size() + ' Java files'}">2 Java files</span>
+                    <span th:if="${project.lastUpdated != null}" th:text="'Updated ' + ${#strings.substring(project.lastUpdated, 0, 10)}">Updated 2025-01-01</span>
                 </p>
                 <p class="card-text" th:if="${project.description != null}" th:text="${project.description}">Description.</p>
                 <p class="card-text muted" th:if="${project.description == null}"
                    th:text="${project.hasReadme ? 'The README has no description text.' : 'This folder has no README.md.'}">No description.</p>
+                <p class="card-meta concepts" th:if="${!project.concepts.isEmpty()}">
+                    <span class="tag plain" th:each="c, stat : ${project.concepts}" th:if="${stat.index < 4}" th:text="${c}">Concept</span>
+                    <span th:if="${project.concepts.size() > 4}" th:text="'+' + ${project.concepts.size() - 4} + ' more'">+2 more</span>
+                </p>
             </article>
         </div>
     </div>
 </main>
 
 <footer th:replace="~{pages :: footer}"></footer>
+<!-- Changing a drop-down applies the filters at once (the Apply button still works without JavaScript). -->
+<script th:src="@{/js/projects.js}"></script>
 </body>
 </html>

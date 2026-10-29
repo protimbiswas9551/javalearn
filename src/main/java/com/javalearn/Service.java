@@ -1,29 +1,47 @@
 package com.javalearn;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.javalearn.Models.FileGroup;
 import com.javalearn.Models.Lesson;
 import com.javalearn.Models.Project;
+import com.javalearn.Models.ProjectFile;
+import com.javalearn.Models.RunRequest;
+import com.javalearn.Models.RunResult;
 import com.javalearn.Models.SourceFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -31,18 +49,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * All the logic of JavaLearn, in three parts:
- *  1. Lessons     : the list of 20 lessons and their text (the text is at the bottom of this file)
- *  2. GitHub      : the only code that talks to GitHub, and it remembers the project list for 15 minutes
- *  3. README      : reads description, difficulty and concepts out of a README.md
+ * All the logic of JavaLearn, in five parts:
+ *  1. Lessons   : the list of 20 lessons and their text (the text is at the bottom of this file)
+ *  2. Quizzes   : the questions of every lesson, read from src/main/resources/quizzes.json
+ *  3. GitHub    : the only code that talks to GitHub (project list is remembered for 15 minutes)
+ *  4. Projects  : searching, filtering and sorting the project list
+ *  5. Playground: sends Java code to an EXTERNAL execution service (never runs code on this server)
+ *  6. README    : reads description, difficulty and concepts out of a README.md
  *
  * How the GitHub part works:
- *  - ONE call to the GitHub REST API ("Git Trees" endpoint) returns the list of every file in the repository.
+ *  - ONE call to the GitHub "Git Trees" API returns the path of every file in the repository.
+ *    If GitHub says the answer was cut off ("truncated"), the folders are read one by one instead,
+ *    so no project is ever silently missing.
  *  - From that list we find the project folders, their .java files and their README.md.
- *  - README.md and .java files are downloaded as plain text from raw.githubusercontent.com.
+ *  - Only README.md files are downloaded for the list. The source code of a .java file is downloaded
+ *    when the visitor opens that file on the project page.
  */
 @org.springframework.stereotype.Service
 public class Service {
+
+    private static final Logger log = LoggerFactory.getLogger(Service.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** Thrown when GitHub cannot be reached or returns an error. The message is safe to show to visitors. */
     public static class GitHubException extends RuntimeException {
@@ -116,30 +143,85 @@ public class Service {
     }
 
     // ==================================================================
-    // 2. GITHUB
+    // 2. QUIZZES
+    // Questions live in src/main/resources/quizzes.json, one array per lesson slug.
+    // A question is {"type":"mcq","q","code","options","answer"(index),"explanation"}
+    //            or {"type":"blank","q","code"(with ___),"answer"(list of accepted texts),"explanation"}.
+    // ==================================================================
+
+    private final Map<String, JsonNode> quizzes = new HashMap<>();
+
+    /** Reads quizzes.json and refuses to start when a lesson has no questions (a mistake we want to see early). */
+    private void loadQuizzes() {
+        try (InputStream in = new ClassPathResource("quizzes.json").getInputStream()) {
+            JsonNode root = MAPPER.readTree(in);
+            for (Lesson lesson : lessons) {
+                JsonNode questions = root.path(lesson.slug());
+                if (!questions.isArray() || questions.isEmpty()) {
+                    throw new IllegalStateException("quizzes.json has no questions for the lesson: " + lesson.slug());
+                }
+                quizzes.put(lesson.slug(), questions);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not read quizzes.json", e);
+        }
+    }
+
+    public int getQuestionCount(String slug) {
+        return quizzes.containsKey(slug) ? quizzes.get(slug).size() : 0;
+    }
+
+    /**
+     * The quiz of one lesson as JSON text, ready to place inside a script tag.
+     * "<" is written as \u003c so the text can never close the script tag early.
+     */
+    public String getQuizJson(String slug) {
+        ObjectNode quiz = MAPPER.createObjectNode();
+        quiz.put("slug", slug);
+        quiz.set("questions", quizzes.getOrDefault(slug, MAPPER.createArrayNode()));
+        return quiz.toString().replace("<", "\\u003c");
+    }
+
+    // ==================================================================
+    // 3. GITHUB
     // ==================================================================
 
     private static final Duration KEEP_FOR = Duration.ofMinutes(15);
-    private static final int MAX_FILES_SHOWN = 15;
+    private static final Duration RETRY_AFTER_ERROR = Duration.ofMinutes(1);
+    private static final int MAX_SOURCE_BYTES = 1_000_000; // bigger files are not shown (the page says so)
 
     private final RestClient restClient;
     private final String owner;
     private final String repo;
     private final String branch;
     private final String projectsPath; // e.g. "Projects", or "" when projects are in the repository root
+    private final String token;        // optional GitHub token: higher API limits and "recently updated" dates
 
     // The remembered list of projects, and when we got it.
     private List<Project> cachedProjects;
     private Instant cachedAt;
 
+    // Remembered source files (small least-recently-used cache), so reopening a file does not call GitHub again.
+    private record CachedText(String text, Instant at) {
+    }
+
+    private final Map<String, CachedText> fileCache = new LinkedHashMap<String, CachedText>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, CachedText> eldest) {
+            return size() > 150;
+        }
+    };
+
     public Service(@Value("${github.owner}") String owner,
                    @Value("${github.repo}") String repo,
                    @Value("${github.branch}") String branch,
-                   @Value("${github.projects-path:}") String projectsPath) {
+                   @Value("${github.projects-path:}") String projectsPath,
+                   @Value("${github.token:}") String token) {
         this.owner = owner;
         this.repo = repo;
         this.branch = branch;
         this.projectsPath = projectsPath.strip().replaceAll("^/+|/+$", ""); // remove slashes at both ends
+        this.token = token.strip();
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(5000);  // give up connecting after 5 seconds
@@ -151,19 +233,31 @@ public class Service {
                 .build();
 
         addLessons();
+        loadQuizzes();
     }
 
     public String getRepoUrl() {
         return "https://github.com/" + owner + "/" + repo;
     }
 
-    /** All projects in the repository (sorted by name). Reloaded from GitHub when the saved list is old. */
+    /**
+     * All projects in the repository (sorted by name). Reloaded from GitHub when the saved list is old.
+     * If GitHub fails but an older list exists, the older list is used and GitHub is tried again in a minute.
+     */
     public synchronized List<Project> getProjects() {
         boolean listIsFresh = cachedProjects != null
                 && Duration.between(cachedAt, Instant.now()).compareTo(KEEP_FOR) < 0;
         if (!listIsFresh) {
-            cachedProjects = loadProjectsFromGitHub();
-            cachedAt = Instant.now();
+            try {
+                cachedProjects = loadProjectsFromGitHub();
+                cachedAt = Instant.now();
+            } catch (GitHubException e) {
+                if (cachedProjects == null) {
+                    throw e; // nothing to fall back on
+                }
+                log.warn("GitHub refresh failed, using the older project list: {}", e.getMessage());
+                cachedAt = Instant.now().minus(KEEP_FOR).plus(RETRY_AFTER_ERROR);
+            }
         }
         return cachedProjects;
     }
@@ -175,37 +269,63 @@ public class Service {
                 .findFirst();
     }
 
-    /** Downloads the source code of the project's Java files (at most MAX_FILES_SHOWN files). */
-    public List<SourceFile> getSourceFiles(Project project) {
+    /**
+     * EVERY .java file of the project, grouped by directory (no source code yet, no limit on the number).
+     * The "path" of a file is relative to the project folder, e.g. "src/model/Account.java".
+     */
+    public List<FileGroup> getFileGroups(Project project) {
         String folderPath = pathPrefix() + project.folderName() + "/";
-        List<SourceFile> files = new ArrayList<>();
-
-        for (String path : project.javaFiles()) {
-            if (files.size() == MAX_FILES_SHOWN) {
-                break;
-            }
-            String code;
-            try {
-                code = downloadText(path);
-            } catch (GitHubException e) {
-                // One broken file should not break the whole page.
-                code = "// This file could not be loaded from GitHub.\n// " + e.getMessage();
-            }
-            String shortName = path.substring(folderPath.length()); // e.g. "src/Main.java"
-            files.add(new SourceFile(shortName, code, githubUrl("blob", path)));
+        Map<String, List<String>> relativePathsByDir = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (String fullPath : project.javaFiles()) {
+            String relative = fullPath.substring(folderPath.length());
+            int slash = relative.lastIndexOf('/');
+            String dir = slash < 0 ? "" : relative.substring(0, slash);
+            relativePathsByDir.computeIfAbsent(dir, key -> new ArrayList<>()).add(relative);
         }
-        return files;
+
+        List<FileGroup> groups = new ArrayList<>();
+        int index = 0;
+        for (Map.Entry<String, List<String>> entry : relativePathsByDir.entrySet()) {
+            List<String> paths = new ArrayList<>(entry.getValue());
+            paths.sort(String.CASE_INSENSITIVE_ORDER);
+            List<ProjectFile> files = new ArrayList<>();
+            for (String relative : paths) {
+                String name = relative.substring(relative.lastIndexOf('/') + 1);
+                files.add(new ProjectFile(relative, name, entry.getKey(), index++));
+            }
+            groups.add(new FileGroup(entry.getKey(), files));
+        }
+        return groups;
+    }
+
+    /**
+     * Downloads the complete source of ONE file of a project. Returns empty when the project has no such file
+     * (so only files that really exist in the repository can be requested).
+     * Throws GitHubException when GitHub fails or the file is larger than 1 MB.
+     */
+    public Optional<SourceFile> getSourceFile(Project project, String relativePath) {
+        String fullPath = pathPrefix() + project.folderName() + "/" + relativePath;
+        if (!project.javaFiles().contains(fullPath)) {
+            return Optional.empty();
+        }
+        String code;
+        synchronized (fileCache) {
+            CachedText cached = fileCache.get(fullPath);
+            code = cached != null && Duration.between(cached.at(), Instant.now()).compareTo(KEEP_FOR) < 0
+                    ? cached.text() : null;
+        }
+        if (code == null) {
+            code = downloadText(fullPath); // outside the lock: a slow download must not block other visitors
+            synchronized (fileCache) {
+                fileCache.put(fullPath, new CachedText(code, Instant.now()));
+            }
+        }
+        return Optional.of(new SourceFile(relativePath, code, githubUrl("blob", fullPath)));
     }
 
     private List<Project> loadProjectsFromGitHub() {
-        // Step 1: one API call gives us the path of every file in the repository.
-        JsonNode response = callGitHubApi();
-        List<String> allFiles = new ArrayList<>();
-        for (JsonNode item : response.path("tree")) {
-            if ("blob".equals(item.path("type").asText())) { // "blob" = file, "tree" = folder
-                allFiles.add(item.path("path").asText());
-            }
-        }
+        // Step 1: the path of every file in the repository.
+        List<String> allFiles = listRepositoryFiles();
 
         // Step 2: group the .java files by project folder.
         // Example path: "Projects/Banking-System/src/Main.java" -> folder "Banking-System"
@@ -235,9 +355,8 @@ public class Service {
             }
         }
 
-        // Step 4: download all READMEs. A small group of helper threads does this at the same time,
-        // otherwise a repository with many projects would take a long time to load.
-        List<Project> projects = new ArrayList<>();
+        // Step 4: download all READMEs (and, with a token, the last-commit dates). A small group of helper
+        // threads does this at the same time, otherwise a repository with many projects would load slowly.
         try (ExecutorService helpers = Executors.newFixedThreadPool(8)) {
             List<Future<Project>> waiting = new ArrayList<>();
             for (Map.Entry<String, List<String>> entry : javaFilesByFolder.entrySet()) {
@@ -246,13 +365,75 @@ public class Service {
                 String readmePath = readmePaths.get((prefix + folder + "/readme.md").toLowerCase());
                 waiting.add(helpers.submit(() -> buildProject(folder, javaFiles, readmePath)));
             }
-            for (Future<Project> future : waiting) {
-                projects.add(future.get());
-            }
-        } catch (Exception e) {
-            throw new GitHubException("Could not read the project READMEs from GitHub.");
+            return awaitAll(waiting);
         }
-        return projects;
+    }
+
+    /** Waits for all helper threads. A failure inside a helper becomes a GitHubException with a visitor-safe message. */
+    private <T> List<T> awaitAll(List<Future<T>> waiting) {
+        List<T> results = new ArrayList<>();
+        try {
+            for (Future<T> future : waiting) {
+                results.add(future.get());
+            }
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof GitHubException github) {
+                throw github;
+            }
+            throw new GitHubException("Could not read the project information from GitHub.");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GitHubException("Loading the projects was interrupted. Please try again.");
+        }
+        return results;
+    }
+
+    /**
+     * The path of every file below the projects folder.
+     * Normal case: one recursive call. If GitHub reports the answer as truncated (very large repositories),
+     * the project folders are read one by one, so every project is still found.
+     */
+    private List<String> listRepositoryFiles() {
+        JsonNode response = apiGet("git/trees/" + UriUtils.encodePath(branch, StandardCharsets.UTF_8) + "?recursive=1");
+        if (!response.path("truncated").asBoolean(false)) {
+            List<String> files = new ArrayList<>();
+            for (JsonNode item : response.path("tree")) {
+                if ("blob".equals(item.path("type").asText())) { // "blob" = file, "tree" = folder
+                    files.add(item.path("path").asText());
+                }
+            }
+            return files;
+        }
+
+        log.warn("GitHub truncated the repository tree; reading the project folders one by one.");
+        String treeRef = projectsPath.isEmpty() ? branch : branch + ":" + projectsPath; // "HEAD:Projects"
+        JsonNode base = apiGet("git/trees/" + UriUtils.encodePath(treeRef, StandardCharsets.UTF_8));
+        String prefix = pathPrefix();
+        try (ExecutorService helpers = Executors.newFixedThreadPool(8)) {
+            List<Future<List<String>>> waiting = new ArrayList<>();
+            for (JsonNode item : base.path("tree")) {
+                String folder = item.path("path").asText();
+                if (!"tree".equals(item.path("type").asText()) || folder.startsWith(".")) {
+                    continue;
+                }
+                String sha = item.path("sha").asText();
+                waiting.add(helpers.submit(() -> {
+                    JsonNode folderTree = apiGet("git/trees/" + sha + "?recursive=1");
+                    List<String> inside = new ArrayList<>();
+                    for (JsonNode file : folderTree.path("tree")) {
+                        if ("blob".equals(file.path("type").asText())) {
+                            inside.add(prefix + folder + "/" + file.path("path").asText());
+                        }
+                    }
+                    return inside;
+                }));
+            }
+            List<String> files = new ArrayList<>();
+            for (List<String> part : awaitAll(waiting)) {
+                files.addAll(part);
+            }
+            return files;
+        }
     }
 
     /** Creates one Project object. Works even when the README is missing. */
@@ -273,16 +454,47 @@ public class Service {
                 findConcepts(readme),
                 javaFiles.stream().sorted().toList(),
                 readme != null,
-                githubUrl("tree", pathPrefix() + folder));
+                githubUrl("tree", pathPrefix() + folder),
+                findLastUpdated(folder));
     }
 
-    /** Calls the GitHub REST API: GET /repos/{owner}/{repo}/git/trees/{branch}?recursive=1 */
-    private JsonNode callGitHubApi() {
+    /**
+     * Date of the newest commit that changed the folder. This needs one API call per project, which the
+     * 60-calls-per-hour limit of anonymous access cannot afford, so it is only done when github.token is set.
+     * Without a token the date stays null and the "recently updated" sort is not offered.
+     */
+    private String findLastUpdated(String folder) {
+        if (token.isEmpty()) {
+            return null;
+        }
+        try {
+            String shaPart = "HEAD".equals(branch) ? "" : "&sha=" + UriUtils.encodeQueryParam(branch, StandardCharsets.UTF_8);
+            JsonNode commits = apiGet("commits?per_page=1" + shaPart
+                    + "&path=" + UriUtils.encodeQueryParam(pathPrefix() + folder, StandardCharsets.UTF_8));
+            String date = commits.path(0).path("commit").path("committer").path("date").asText("");
+            return date.isEmpty() ? null : date;
+        } catch (GitHubException e) {
+            return null; // unknown, so it is not shown and not used for sorting
+        }
+    }
+
+    /** True when at least one project has a known update date (then the "recently updated" sort is honest). */
+    public static boolean hasUpdateDates(List<Project> projects) {
+        return projects.stream().anyMatch(project -> project.lastUpdated() != null);
+    }
+
+    /** GET https://api.github.com/repos/{owner}/{repo}/{relative}. Adds the token when one is configured. */
+    private JsonNode apiGet(String relative) {
+        String url = "https://api.github.com/repos/" + owner + "/" + repo + "/" + relative;
         try {
             JsonNode response = restClient.get()
-                    .uri("https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=1",
-                            owner, repo, branch)
+                    .uri(URI.create(url))
                     .header(HttpHeaders.ACCEPT, "application/vnd.github+json")
+                    .headers(headers -> {
+                        if (!token.isEmpty()) {
+                            headers.setBearerAuth(token);
+                        }
+                    })
                     .retrieve()
                     .body(JsonNode.class);
             if (response == null) {
@@ -296,13 +508,19 @@ public class Service {
         }
     }
 
-    /** Downloads one text file (README or .java) from raw.githubusercontent.com. */
+    /** Downloads one text file (README or .java) from raw.githubusercontent.com. Files over 1 MB are refused, never cut. */
     private String downloadText(String path) {
         String url = "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/"
                 + UriUtils.encodePath(path, StandardCharsets.UTF_8); // turns spaces into %20 etc.
         try {
             byte[] bytes = restClient.get().uri(URI.create(url)).retrieve().body(byte[].class);
-            return bytes == null ? "" : new String(bytes, StandardCharsets.UTF_8);
+            if (bytes == null) {
+                return "";
+            }
+            if (bytes.length > MAX_SOURCE_BYTES) {
+                throw new GitHubException("This file is larger than 1 MB, so it is not shown here. Please open it on GitHub.");
+            }
+            return new String(bytes, StandardCharsets.UTF_8);
         } catch (RestClientResponseException e) {
             throw new GitHubException(explainStatus(e.getStatusCode().value()));
         } catch (RestClientException e) {
@@ -315,7 +533,8 @@ public class Service {
             return "The GitHub repository or file was not found. Check github.owner, github.repo and github.branch in application.properties.";
         }
         if (status == 403 || status == 429) {
-            return "GitHub is limiting requests right now. Please try again in a few minutes.";
+            return "GitHub is limiting requests right now. Please try again in a few minutes"
+                    + (token.isEmpty() ? " (setting github.token raises the limit)." : ".");
         }
         return "GitHub returned an error (HTTP " + status + "). Please try again later.";
     }
@@ -331,7 +550,371 @@ public class Service {
     }
 
     // ==================================================================
-    // 3. README PARSER
+    // 4. PROJECT SEARCH, FILTERS AND SORTING
+    // All of it works on the remembered project list, so it never causes a GitHub request.
+    // ==================================================================
+
+    /** The sort choices the page may offer. "updated" is only offered when update dates are known. */
+    public static Map<String, String> sortOptions(boolean withUpdated) {
+        Map<String, String> options = new LinkedHashMap<>();
+        options.put("name-asc", "Name (A to Z)");
+        options.put("name-desc", "Name (Z to A)");
+        return options;
+    }
+
+    /** 0 = beginner/easy, 1 = intermediate/medium, 2 = advanced/hard, 3 = the README gives no difficulty. */
+    public static int difficultyRank(String difficulty) {
+        if (difficulty == null) {
+            return 3;
+        }
+        return switch (difficulty.toLowerCase(Locale.ROOT)) {
+            case "beginner", "easy" -> 0;
+            case "intermediate", "medium" -> 1;
+            case "advanced", "hard" -> 2;
+            default -> 3;
+        };
+    }
+
+    /** Difficulty levels that really appear in some README, from easy to hard. */
+    public static List<String> difficultyOptions(List<Project> projects) {
+        return projects.stream()
+                .map(Project::difficulty)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted(Comparator.comparingInt(DIFFICULTY_LEVELS::indexOf))
+                .toList();
+    }
+
+    /**
+     * Concepts found in the READMEs of at least two projects (so the filter is useful), A to Z.
+     * Concepts that appear only once can still be found with the search box.
+     */
+    public static List<String> conceptOptions(List<Project> projects) {
+        Map<String, String> display = new TreeMap<>();
+        Map<String, Integer> counts = new HashMap<>();
+        for (Project project : projects) {
+            project.concepts().stream().map(String::strip).filter(c -> !c.isEmpty())
+                    .map(c -> c.toLowerCase(Locale.ROOT)).distinct()
+                    .forEach(key -> counts.merge(key, 1, Integer::sum));
+            for (String concept : project.concepts()) {
+                display.putIfAbsent(concept.strip().toLowerCase(Locale.ROOT), concept.strip());
+            }
+        }
+        return display.entrySet().stream()
+                .filter(entry -> counts.getOrDefault(entry.getKey(), 0) >= 2)
+                .map(Map.Entry::getValue)
+                .toList();
+    }
+
+    /**
+     * Search + difficulty filter + concept filter + sort, all combined.
+     * Every word of the search must appear somewhere in: name, folder, description, concepts, difficulty or file names.
+     */
+    public static List<Project> searchProjects(List<Project> projects, String query, String difficulty,
+                                               String concept, String sort) {
+        String[] words = query.strip().toLowerCase(Locale.ROOT).split("\\s+");
+
+        List<Project> result = new ArrayList<>();
+        for (Project project : projects) {
+            if (!difficulty.isEmpty() && !difficulty.equalsIgnoreCase(project.difficulty())) {
+                continue;
+            }
+            if (!concept.isEmpty() && project.concepts().stream().noneMatch(c -> c.strip().equalsIgnoreCase(concept.strip()))) {
+                continue;
+            }
+            String haystack = searchText(project);
+            boolean allWordsFound = true;
+            for (String word : words) {
+                if (!word.isEmpty() && !haystack.contains(word)) {
+                    allWordsFound = false;
+                    break;
+                }
+            }
+            if (allWordsFound) {
+                result.add(project);
+            }
+        }
+
+        Comparator<Project> byName = Comparator.comparing(project -> project.displayName().toLowerCase(Locale.ROOT));
+        Comparator<Project> order = "name-desc".equals(sort) ? byName.reversed() : byName;
+        result.sort(order);
+        return result;
+    }
+
+    private static String searchText(Project project) {
+        StringBuilder text = new StringBuilder();
+        text.append(project.displayName()).append(' ').append(project.folderName()).append(' ');
+        if (project.description() != null) {
+            text.append(project.description()).append(' ');
+        }
+        if (project.difficulty() != null) {
+            text.append(project.difficulty()).append(' ');
+        }
+        project.concepts().forEach(concept -> text.append(concept).append(' '));
+        project.javaFiles().forEach(path -> text.append(path.substring(path.lastIndexOf('/') + 1)).append(' '));
+        return text.toString().toLowerCase(Locale.ROOT);
+    }
+
+    // ==================================================================
+    // 5. CODE PLAYGROUND
+    // The submitted Java code is NEVER compiled or run on this server. It is sent to an external execution
+    // service that isolates it (default: the public Judge0 CE API, https://ce.judge0.com). The API key, if any,
+    // stays here on the server and is never sent to the browser.
+    //   sandbox.enabled         true/false
+    //   sandbox.url             base URL of a Judge0-compatible service
+    //   sandbox.api-key         optional token for the service
+    //   sandbox.api-key-header  header that carries the token (default X-Auth-Token)
+    //   sandbox.language-id     Java language id of the service; 0 = pick the newest "Java (...)" automatically
+    //   sandbox.timeout-seconds how long to wait for the result
+    // ==================================================================
+
+    private static final int MAX_CODE_CHARS = 64_000;
+    private static final int MAX_STDIN_CHARS = 10_000;
+    private static final int MAX_OUTPUT_CHARS = 100_000;
+    private static final int RUNS_PER_MINUTE = 10; // per visitor address, protects the shared service
+
+    @Value("${sandbox.enabled:true}")
+    private boolean sandboxEnabled;
+    @Value("${sandbox.url:https://ce.judge0.com}")
+    private String sandboxUrl;
+    @Value("${sandbox.api-key:}")
+    private String sandboxApiKey;
+    @Value("${sandbox.api-key-header:X-Auth-Token}")
+    private String sandboxApiKeyHeader;
+    @Value("${sandbox.language-id:0}")
+    private int sandboxLanguageId;
+    @Value("${sandbox.timeout-seconds:25}")
+    private int sandboxTimeoutSeconds;
+
+    private RestClient sandboxClient;
+    private Integer resolvedLanguageId;
+    private String resolvedLanguageName = "Java";
+    private final Map<String, Deque<Long>> recentRuns = new HashMap<>();
+
+    public boolean isSandboxEnabled() {
+        return sandboxEnabled;
+    }
+
+    /** Compiles and runs the code on the external service and translates the answer. Never throws. */
+    public RunResult runCode(RunRequest request, String client) {
+        if (!sandboxEnabled) {
+            return failure("unavailable", "Running code is switched off on this server (sandbox.enabled=false).");
+        }
+        String code = request == null || request.code() == null ? "" : request.code();
+        String stdin = request == null || request.stdin() == null ? "" : request.stdin();
+        if (code.isBlank()) {
+            return failure("error", "There is no code to run.");
+        }
+        if (code.length() > MAX_CODE_CHARS) {
+            return failure("error", "The code is longer than " + MAX_CODE_CHARS + " characters.");
+        }
+        if (stdin.length() > MAX_STDIN_CHARS) {
+            return failure("error", "The input is longer than " + MAX_STDIN_CHARS + " characters.");
+        }
+        if (!allowRun(client)) {
+            return failure("error", "Too many runs. Please wait a minute and try again.");
+        }
+
+        try {
+            int languageId = resolveLanguageId();
+
+            ObjectNode body = MAPPER.createObjectNode();
+            body.put("source_code", encode(code));
+            body.put("language_id", languageId);
+            if (!stdin.isEmpty()) {
+                body.put("stdin", encode(stdin));
+            }
+            JsonNode created = sandboxCall(sandboxBase() + "/submissions?base64_encoded=true&wait=false", body.toString());
+            String submissionToken = created.path("token").asText("");
+            if (submissionToken.isEmpty()) {
+                return failure("error", "The execution service did not accept the program.");
+            }
+
+            // The public service does not allow wait=true, so ask for the result until it is ready.
+            String resultUrl = sandboxBase() + "/submissions/" + submissionToken
+                    + "?base64_encoded=true&fields=stdout,stderr,compile_output,message,status,time,memory";
+            long deadline = System.currentTimeMillis() + sandboxTimeoutSeconds * 1000L;
+            while (System.currentTimeMillis() < deadline) {
+                Thread.sleep(700);
+                JsonNode result = sandboxCall(resultUrl, null);
+                int statusId = result.path("status").path("id").asInt(0);
+                if (statusId > 2) { // 1 = in queue, 2 = processing, everything else is a final answer
+                    return translate(result, statusId);
+                }
+            }
+            return failure("error", "The execution service did not answer within " + sandboxTimeoutSeconds + " seconds.");
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return failure("error", "The run was interrupted.");
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            if (status == 429) {
+                return failure("unavailable", "The code execution service is busy right now (rate limit). Please try again in a moment.");
+            }
+            if (status == 401 || status == 403) {
+                return failure("unavailable", "The code execution service refused the request. Check sandbox.api-key on the server.");
+            }
+            return failure("unavailable", "The code execution service returned an error (HTTP " + status + ").");
+        } catch (RestClientException e) {
+            return failure("unavailable", "The code execution service could not be reached. Please try again later.");
+        } catch (RuntimeException e) {
+            log.warn("Code execution failed", e);
+            return failure("error", "Something went wrong while running the code.");
+        }
+    }
+
+    /** Turns a finished Judge0 submission into a RunResult. Judge0 status ids: 3 ok, 5 time limit, 6 compile error, 7-12 run-time errors. */
+    private RunResult translate(JsonNode result, int statusId) {
+        String description = result.path("status").path("description").asText("");
+        String stdout = limit(decode(result.path("stdout")));
+        String stderr = limit(decode(result.path("stderr")));
+        String compileOutput = limit(decode(result.path("compile_output")));
+        String serviceMessage = decode(result.path("message"));
+        String time = result.path("time").isNull() || result.path("time").isMissingNode() ? null : result.path("time").asText();
+        Integer memory = result.path("memory").isNumber() ? result.path("memory").asInt() : null;
+
+        String status;
+        String message;
+        if (statusId == 3) {
+            status = "success";
+            message = "Finished successfully (" + resolvedLanguageName + ").";
+        } else if (statusId == 6) {
+            status = "compile_error";
+            message = "The program did not compile.";
+        } else if (statusId == 5) {
+            status = "timeout";
+            message = "Time limit exceeded. The program ran too long (maybe an endless loop).";
+        } else if (statusId >= 7 && statusId <= 12) {
+            status = "runtime_error";
+            message = "The program stopped with a run-time error (" + description + ").";
+        } else {
+            status = "error";
+            message = "The execution service reported a problem (" + description + ")."
+                    + (serviceMessage == null || serviceMessage.isBlank() ? "" : " " + serviceMessage.strip());
+        }
+        return new RunResult(status, message, stdout, stderr, compileOutput, time, memory, resolvedLanguageName);
+    }
+
+    private RunResult failure(String status, String message) {
+        return new RunResult(status, message, null, null, null, null, null, null);
+    }
+
+    /** One request to the execution service: POST when a body is given, otherwise GET. */
+    private JsonNode sandboxCall(String url, String jsonBody) {
+        RestClient client = sandboxClient();
+        JsonNode answer;
+        if (jsonBody != null) {
+            answer = client.post().uri(URI.create(url))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .headers(this::addSandboxKey)
+                    .body(jsonBody)
+                    .retrieve().body(JsonNode.class);
+        } else {
+            answer = client.get().uri(URI.create(url))
+                    .headers(this::addSandboxKey)
+                    .retrieve().body(JsonNode.class);
+        }
+        if (answer == null) {
+            throw new RestClientException("empty answer");
+        }
+        return answer;
+    }
+
+    private void addSandboxKey(HttpHeaders headers) {
+        if (!sandboxApiKey.isBlank()) {
+            headers.set(sandboxApiKeyHeader, sandboxApiKey.strip());
+        }
+    }
+
+    private synchronized RestClient sandboxClient() {
+        if (sandboxClient == null) {
+            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+            factory.setConnectTimeout(5000);
+            factory.setReadTimeout(10000);
+            sandboxClient = RestClient.builder().requestFactory(factory)
+                    .defaultHeader(HttpHeaders.USER_AGENT, "JavaLearn").build();
+        }
+        return sandboxClient;
+    }
+
+    /** The service address without spaces or a closing slash. */
+    private String sandboxBase() {
+        return sandboxUrl.strip().replaceAll("/+$", "");
+    }
+
+    /** The configured language id, or the newest "Java (...)" entry of the service. Cached once found. */
+    private synchronized int resolveLanguageId() {
+        if (sandboxLanguageId > 0) {
+            resolvedLanguageName = "Java";
+            return sandboxLanguageId;
+        }
+        if (resolvedLanguageId != null) {
+            return resolvedLanguageId;
+        }
+        int bestId = -1;
+        int bestVersion = -1;
+        String bestName = "Java";
+        Pattern version = Pattern.compile("^Java \\((?:OpenJDK|JDK) (\\d+)");
+        for (JsonNode language : sandboxCall(sandboxBase() + "/languages", null)) {
+            Matcher matcher = version.matcher(language.path("name").asText(""));
+            if (matcher.find() && Integer.parseInt(matcher.group(1)) > bestVersion) {
+                bestVersion = Integer.parseInt(matcher.group(1));
+                bestId = language.path("id").asInt();
+                bestName = language.path("name").asText();
+            }
+        }
+        if (bestId < 0) {
+            throw new RestClientException("no Java language in the service");
+        }
+        resolvedLanguageName = bestName;
+        resolvedLanguageId = bestId;
+        return bestId;
+    }
+
+    /** At most RUNS_PER_MINUTE runs per visitor address in any minute. */
+    private synchronized boolean allowRun(String client) {
+        long now = System.currentTimeMillis();
+        if (recentRuns.size() > 2000) { // forget visitors who have been quiet for a minute
+            recentRuns.values().removeIf(times -> times.isEmpty() || now - times.peekLast() > 60_000);
+        }
+        Deque<Long> times = recentRuns.computeIfAbsent(client, key -> new ArrayDeque<>());
+        while (!times.isEmpty() && now - times.peekFirst() > 60_000) {
+            times.pollFirst();
+        }
+        if (times.size() >= RUNS_PER_MINUTE) {
+            return false;
+        }
+        times.addLast(now);
+        return true;
+    }
+
+    private static String encode(String text) {
+        return Base64.getEncoder().encodeToString(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Judge0 sends base64 text (with line breaks) or null. */
+    private static String decode(JsonNode field) {
+        if (field == null || field.isNull() || field.isMissingNode()) {
+            return null;
+        }
+        try {
+            return new String(Base64.getMimeDecoder().decode(field.asText()), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return field.asText();
+        }
+    }
+
+    /** Output is cut at 100,000 characters, and the text says so. */
+    private static String limit(String output) {
+        if (output == null || output.length() <= MAX_OUTPUT_CHARS) {
+            return output;
+        }
+        return output.substring(0, MAX_OUTPUT_CHARS) + "\n[Output cut: more than " + MAX_OUTPUT_CHARS + " characters.]";
+    }
+
+    // ==================================================================
+    // 6. README PARSER
     // Nothing is invented: when a fact is not in the README, null (or an empty list) is returned.
     //  - Description : the first normal paragraph of text
     //  - Difficulty  : the word "Difficulty" followed by a level, e.g. "**Difficulty:** Beginner"

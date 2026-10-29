@@ -10,20 +10,59 @@
             <div>
                 <h1>Learn Java step by step, then read real Java projects.</h1>
                 <p class="lead">
-                    JavaLearn is a small learning website. It has text lessons on the core topics of Java,
-                    and a projects section that loads Java programs directly from a GitHub repository,
-                    so you can read the source code of complete programs.
+                    A dedicated developer platform for Java learners. Work through guided lessons,
+                    run code in an isolated playground, inspect execution steps with Java X-Ray,
+                    and analyze complexity and code quality with the built-in Coach.
                 </p>
                 <div class="button-row">
                     <a class="button primary" th:href="@{/learn}">Start Learning</a>
                     <a class="button" th:href="@{/projects}">Explore Projects</a>
+                    <a class="button" th:href="@{/sandbox}">Open Playground</a>
                 </div>
             </div>
-<pre class="hero-code" aria-label="A small Java program"><code>public class Main {
+            <div class="hero-window" aria-label="Java Code Sample">
+                <div class="hero-window-header">
+                    <div class="window-dots" aria-hidden="true">
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                        <span class="window-dot"></span>
+                    </div>
+                    <span class="window-title">Main.java</span>
+                    <span style="width: 2rem;"></span>
+                </div>
+                <pre class="hero-code"><code>public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello, JavaLearn!");
+        String greeting = "Welcome to JavaLearn";
+        System.out.println(greeting);
+        
+        // Fast, interactive Java experimentation
+        int[] data = { 10, 20, 30 };
+        int sum = 0;
+        for (int v : data) sum += v;
+        System.out.println("Sum: " + sum);
     }
 }</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platform Capabilities -->
+    <section class="section" style="padding-top: 3rem; padding-bottom: 2rem;">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Structured Curriculum</h3>
+                    <p>Core Java lessons covering syntax, object-oriented programming, data structures, and collections with end-of-lesson knowledge checks.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Interactive Playground &amp; X-Ray</h3>
+                    <p>Compile and run Java code directly in the browser. Step through execution frames and heap objects with Java X-Ray.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Code Quality Coach</h3>
+                    <p>Get instant Big-O time and auxiliary space complexity estimates, compiler diagnostics, and beginner-friendly improvement suggestions.</p>
+                </div>
+            </div>
         </div>
     </section>
 

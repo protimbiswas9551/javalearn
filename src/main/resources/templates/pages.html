@@ -16,18 +16,98 @@
 <body>
 
 <header class="site-header" th:fragment="header(active)">
-    <div class="container header-inner">
-        <a class="brand" th:href="@{/}"><span class="brand-java">Java</span>Learn</a>
-        <nav class="main-nav" aria-label="Main">
-            <a th:href="@{/learn}" th:classappend="${active == 'learn'} ? 'active'">Learn</a>
-            <a th:href="@{/projects}" th:classappend="${active == 'projects'} ? 'active'">Projects</a>
-            <a th:href="@{/about}" th:classappend="${active == 'about'} ? 'active'">About</a>
-        </nav>
+    <div class="header-inner">
+        <div class="header-left">
+            <button type="button" class="sidebar-toggle-btn" id="sidebar-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <a class="brand" th:href="@{/}">
+                <span class="brand-badge">JL</span>
+                <span><span class="brand-java">Java</span>Learn</span>
+            </a>
+        </div>
+        <div class="header-status">
+            <a th:href="@{/sandbox}" class="header-status-pill">
+                <span class="status-dot"></span>
+                <span>Playground Ready</span>
+            </a>
+        </div>
     </div>
 </header>
 
+<div class="app-layout">
+    <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Documentation Sidebar">
+        <div class="sidebar-header">
+            <a class="brand" th:href="@{/}">
+                <span class="brand-badge">JL</span>
+                <span><span class="brand-java">Java</span>Learn</span>
+            </a>
+        </div>
+        <div class="sidebar-scroll">
+            <div class="nav-group">
+                <div class="nav-group-title">Learn</div>
+                <a th:href="@{/}" th:classappend="${active == 'home'} ? 'active'">
+                    <span class="nav-icon">⌂</span> Overview
+                </a>
+                <a th:href="@{/learn}" th:classappend="${active == 'learn'} ? 'active'">
+                    <span class="nav-icon">📖</span> Java Lessons
+                </a>
+                <a th:href="@{/progress}" th:classappend="${active == 'progress'} ? 'active'">
+                    <span class="nav-icon">✓</span> Quizzes &amp; Progress
+                </a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-title">Build &amp; Test</div>
+                <a th:href="@{/sandbox}" th:classappend="${active == 'sandbox'} ? 'active'">
+                    <span class="nav-icon">▶</span> Playground &amp; X-Ray
+                </a>
+                <a th:href="@{/projects}" th:classappend="${active == 'projects'} ? 'active'">
+                    <span class="nav-icon">📁</span> GitHub Projects
+                </a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-title">Reference</div>
+                <a th:href="@{/about}" th:classappend="${active == 'about'} ? 'active'">
+                    <span class="nav-icon">ℹ</span> About JavaLearn
+                </a>
+                <a th:href="@{/privacy}" th:classappend="${active == 'privacy'} ? 'active'">
+                    <span class="nav-icon">🔒</span> Privacy Policy
+                </a>
+                <a th:href="@{/terms}" th:classappend="${active == 'terms'} ? 'active'">
+                    <span class="nav-icon">📜</span> Terms of Use
+                </a>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <a th:href="${@service.repoUrl}" target="_blank" rel="noopener" class="sidebar-gh-link">
+                GitHub Repository ↗
+            </a>
+        </div>
+    </aside>
+
+    <div class="app-content">
+        <!-- Consistent Breadcrumbs / Back & Home Bar -->
+        <nav class="nav-strip" aria-label="Page navigation" th:fragment="navStrip(backUrl, backLabel)">
+            <a class="nav-strip-btn nav-back" th:href="${backUrl ?: '/'}" th:attr="data-fallback=${backUrl ?: '/'}">
+                <span aria-hidden="true">&larr;</span> Back
+            </a>
+            <span class="nav-strip-sep" aria-hidden="true">&bull;</span>
+            <a class="nav-strip-btn nav-home" th:href="@{/}">
+                Home
+            </a>
+            <span class="nav-strip-label" th:if="${backLabel != null}" th:text="'(' + ${backLabel} + ')'"></span>
+        </nav>
+
 <th:block th:switch="${page}">
 <main th:case="'about'" class="container page prose">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <h1>About JavaLearn</h1>
 
     <p>
@@ -41,6 +121,9 @@
             Each lesson has an explanation, syntax, examples and important points.</li>
         <li><a th:href="@{/projects}">Projects</a>: Java projects read automatically from a GitHub repository,
             with their descriptions and full source code.</li>
+        <li><a th:href="@{/sandbox}">Playground</a>: write Java in the browser and run it. The code runs on an
+            external, isolated service, not on this server.</li>
+        <li><a th:href="@{/progress}">Progress</a>: lessons you finished and your quiz scores, saved in this browser only.</li>
     </ul>
 
     <h2>How the projects section works</h2>
@@ -64,6 +147,7 @@
 </main>
 
 <main th:case="'privacy'" class="container page prose">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <h1>Privacy</h1>
     <p>JavaLearn is a learning project. It is designed to collect as little information as possible.</p>
 
@@ -78,6 +162,18 @@
     <p>
         The words you type in the project search are sent to the JavaLearn server so it can filter the project list.
         The application does not store them.
+    </p>
+
+    <h2>Progress, Playground and X-Ray</h2>
+    <p>
+        Your lesson progress and quiz scores are stored in your own browser (localStorage). They are not sent to the
+        server and do not sync between devices. When you click <strong>Run</strong> in the Playground, your code and
+        input are processed by an external code execution service (by default the public Judge0 CE service).
+        When you use <strong>X-Ray</strong> to step through execution, code is compiled and debugged locally on this server
+        inside an isolated, separate JVM process subject to strict execution limits and timeouts.
+        When you use the <strong>Code Quality Coach</strong>, your code is analyzed statically and checked against
+        diagnostics without running untrusted code directly in the server application process.
+        Do not submit private keys, credentials, or sensitive secrets in code.
     </p>
 
     <h2>GitHub</h2>
@@ -95,6 +191,7 @@
 </main>
 
 <main th:case="'terms'" class="container page prose">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <h1>Terms of use</h1>
     <p>By using JavaLearn you agree to the simple terms below.</p>
 
@@ -128,6 +225,7 @@
 </main>
 
 <main th:case="'error'" class="container page narrow">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
     <!-- errorTitle / errorMessage are set by our controllers; Spring's own 404 and 500 errors use the defaults -->
     <h1 th:text="${errorTitle ?: 'Page not found'}">Page not found</h1>
     <p th:text="${errorMessage ?: 'This page does not exist, or something unexpected went wrong.'}">Message.</p>
@@ -139,17 +237,19 @@
 </main>
 </th:block>
 
-<footer class="site-footer" th:fragment="footer">
-    <div class="container footer-inner">
-        <p>JavaLearn is a college Java project for learning Java.</p>
-        <nav aria-label="Footer">
-            <a th:href="@{/privacy}">Privacy</a>
-            <a th:href="@{/terms}">Terms</a>
-            <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">Projects on GitHub</a>
-        </nav>
-    </div>
-    <script th:src="@{/js/site.js}"></script>
-</footer>
+    <footer class="site-footer" th:fragment="footer">
+        <div class="footer-inner">
+            <p>JavaLearn &mdash; Professional Java learning platform with execution tracing and code quality analysis.</p>
+            <nav aria-label="Footer">
+                <a th:href="@{/privacy}">Privacy</a>
+                <a th:href="@{/terms}">Terms</a>
+                <a th:href="${@service.repoUrl}" target="_blank" rel="noopener">Projects on GitHub</a>
+            </nav>
+        </div>
+        <script th:src="@{/js/site.js}"></script>
+    </footer>
+    </div><!-- /.app-content -->
+</div><!-- /.app-layout -->
 
 </body>
 </html>

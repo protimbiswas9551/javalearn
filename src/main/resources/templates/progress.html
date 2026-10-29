@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head('My progress - JavaLearn')}"></head>
+<body>
+<header th:replace="~{pages :: header('progress')}"></header>
+
+<main class="container page" id="progress-page">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
+    <h1>My progress</h1>
+    <p class="page-intro">
+        Your progress is saved <strong>in this browser only</strong> (localStorage). There is no account, so it does
+        not sync between devices or browsers, and clearing your browser data removes it.
+    </p>
+
+    <div id="p-notice"></div>
+
+    <section class="stats" aria-label="Summary">
+        <div class="stat"><span class="stat-value" id="p-count">0 of 20</span><span class="stat-label">lessons completed</span></div>
+        <div class="stat"><span class="stat-value" id="p-percent">0%</span><span class="stat-label">overall</span></div>
+        <div class="stat"><span class="stat-value" id="p-quizzes">0 of 20</span><span class="stat-label">quizzes completed</span></div>
+    </section>
+
+    <div class="bar" role="progressbar" aria-label="Overall completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="bar-fill" id="p-bar"></div>
+    </div>
+
+    <div id="p-continue" class="continue"></div>
+
+    <section class="detail-section">
+        <h2>Lessons and quizzes</h2>
+        <div class="table-wrap">
+            <table class="progress-table">
+                <thead><tr><th scope="col">#</th><th scope="col">Lesson</th><th scope="col">Status</th><th scope="col">Best quiz score</th></tr></thead>
+                <tbody id="p-rows"></tbody>
+            </table>
+        </div>
+        <!-- One hidden entry per lesson: the script reads the titles, links and question counts from here. -->
+        <ul hidden>
+            <li th:each="lesson : ${allLessons}"
+                th:attr="data-slug=${lesson.slug},data-title=${lesson.title},data-url=@{/learn/{slug}(slug=${lesson.slug})},data-questions=${service.getQuestionCount(lesson.slug)}"></li>
+        </ul>
+    </section>
+
+    <section class="detail-section">
+        <h2>Reset progress</h2>
+        <p class="muted">This deletes your completed lessons and quiz scores from this browser.</p>
+        <button type="button" class="button" id="p-reset">Reset progress&hellip;</button>
+        <div id="p-confirm" class="notice error" hidden>
+            <p><strong>Delete all saved progress?</strong> This cannot be undone.</p>
+            <div class="button-row">
+                <button type="button" class="button primary" id="p-yes">Yes, reset everything</button>
+                <button type="button" class="button" id="p-no">Cancel</button>
+            </div>
+        </div>
+        <p class="muted" id="p-reset-done" role="status"></p>
+    </section>
+</main>
+
+<footer th:replace="~{pages :: footer}"></footer>
+<script th:src="@{/js/learn.js}"></script>
+</body>
+</html>

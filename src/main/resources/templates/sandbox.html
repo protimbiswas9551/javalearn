@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{pages :: head('Java Playground – JavaLearn')}"></head>
+<body>
+<header th:replace="~{pages :: header('sandbox')}"></header>
+
+<main class="container page" id="sandbox"
+      th:attr="data-run-url=@{/api/run},data-xray-url=@{/api/xray},data-coach-url=@{/api/coach/analyze},data-ai-url=@{/api/ai/chat},
+               data-enabled=${sandboxEnabled},data-xray-enabled=${xrayEnabled},
+               data-ai-enabled=${aiEnabled},data-ai-configured=${aiConfigured},data-ai-provider=${aiProvider}">
+    <nav th:replace="~{pages :: navStrip('/', 'Home')}"></nav>
+    <h1>Java Playground &amp; X-Ray</h1>
+    <p class="page-intro">
+        Write Java code, then <strong>Run</strong> it normally or use <strong>X-Ray</strong> to step
+        through execution and inspect variables, the call stack and object state in real time.
+    </p>
+
+        <!-- Mode tabs -->
+        <div class="sandbox-tabs" role="tablist" aria-label="Playground mode">
+            <button id="tab-run"   class="sandbox-tab active" role="tab" aria-selected="true"  aria-controls="panel-run"   type="button">▶ Run</button>
+            <button id="tab-xray"  class="sandbox-tab"        role="tab" aria-selected="false" aria-controls="panel-xray"  type="button">🔬 X-Ray</button>
+            <button id="tab-ai"    class="sandbox-tab"        role="tab" aria-selected="false" aria-controls="panel-ai"    type="button">🤖 AI Assistant</button>
+        </div>
+
+    <div class="notice error" role="alert" th:if="${!sandboxEnabled and !xrayEnabled}">
+        <strong>Code execution is disabled on this server.</strong>
+        See the README (<code>sandbox.enabled</code>, <code>xray.enabled</code>) to enable it.
+    </div>
+
+    <div class="playground-layout">
+        <!-- ============================================================ -->
+        <!-- LEFT COLUMN: Code Editor and Controls                        -->
+        <!-- ============================================================ -->
+        <div class="playground-editor-col">
+            <div class="sandbox-bar">
+                <div class="field">
+                    <label for="sample">Sample program</label>
+                    <select id="sample"></select>
+                </div>
+                <div class="button-row" id="run-controls">
+                    <button type="button" class="button primary" id="run"
+                            th:disabled="${!sandboxEnabled}">Run</button>
+                    <button type="button" class="button coach-analyze-btn" id="analyze-btn" title="Analyze code complexity, issues, and get suggestions">
+                        💡 Analyze Code
+                    </button>
+                    <button type="button" class="button" id="reset">Reset</button>
+                </div>
+                <div class="button-row" id="xray-controls" hidden>
+                    <button type="button" class="button primary xray-btn" id="xray-start"
+                            th:disabled="${!xrayEnabled}">🔬 Trace</button>
+                    <button type="button" class="button" id="xray-stop"  disabled>■ Stop</button>
+                    <button type="button" class="button" id="xray-reset">↺ Reset</button>
+                </div>
+            </div>
+
+            <!-- Code editor with X-Ray line-number gutter -->
+            <div class="editor-wrap" id="editor-wrap">
+                <div class="editor-gutter" id="editor-gutter" aria-hidden="true"></div>
+                <textarea id="code" class="editor xray-aware" spellcheck="false"
+                          autocapitalize="none" autocomplete="off"
+                          rows="22" aria-label="Java source code"
+                          aria-describedby="editor-help"></textarea>
+            </div>
+            <p class="muted small" id="editor-help">Tab inserts spaces. Esc then Tab moves focus. Ctrl+Enter runs or traces.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- RIGHT COLUMN: Results and Analysis Panels                    -->
+        <!-- ============================================================ -->
+        <div class="playground-results-col">
+            <!-- RUN PANEL -->
+            <div id="panel-run" role="tabpanel" aria-labelledby="tab-run">
+                <div class="field">
+                    <label for="stdin">Standard input (optional)</label>
+                    <textarea id="stdin" class="editor small" spellcheck="false" rows="2"></textarea>
+                </div>
+                <section class="output-panel" aria-labelledby="out-title">
+                    <h2 id="out-title">Result</h2>
+                    <p id="run-status" class="run-status" role="status" aria-live="polite">Nothing has been run yet.</p>
+                    <div id="panel-compile" hidden><h3>Compilation errors</h3><pre class="output err"><code></code></pre></div>
+                    <div id="panel-stdout"  hidden><h3>Output</h3><pre class="output"><code></code></pre></div>
+                    <div id="panel-stderr"  hidden><h3>Error output</h3><pre class="output err"><code></code></pre></div>
+                    <p id="run-meta" class="muted small"></p>
+
+                    <!-- Code Quality Coach Report -->
+                    <div id="coach-report" class="coach-report-card" hidden>
+                        <div class="coach-header">
+                            <div class="coach-title-wrap">
+                                <span class="coach-icon">💡</span>
+                                <div>
+                                    <h3 class="coach-title">Code Quality Coach</h3>
+                                    <p class="coach-subtitle">Static complexity estimation, diagnostics &amp; tips</p>
+                                </div>
+                            </div>
+                            <div class="coach-header-right">
+                                <span id="coach-outdated-badge" class="badge-outdated" hidden>Outdated (code changed)</span>
+                                <button type="button" class="coach-close-btn" id="coach-close" aria-label="Close report">&times;</button>
+                            </div>
+                        </div>
+
+                        <div id="coach-body" class="coach-body">
+                            <!-- 1. Complexity Section -->
+                            <div class="coach-section">
+                                <h4 class="coach-section-heading">1. Complexity Analysis</h4>
+                                <div class="coach-complexity-grid">
+                                    <div class="coach-metric-card">
+                                        <span class="metric-label">Time Complexity</span>
+                                        <span class="metric-value" id="coach-time-val">—</span>
+                                        <p class="metric-desc" id="coach-time-desc"></p>
+                                        <div class="metric-cases" id="coach-time-cases" hidden></div>
+                                    </div>
+                                    <div class="coach-metric-card">
+                                        <span class="metric-label">Auxiliary Space</span>
+                                        <span class="metric-value" id="coach-space-val">—</span>
+                                        <p class="metric-desc" id="coach-space-desc"></p>
+                                    </div>
+                                </div>
+                                <p class="coach-assumptions muted small" id="coach-assumptions"></p>
+                            </div>
+
+                            <!-- 2. Issues Section -->
+                            <div class="coach-section">
+                                <h4 class="coach-section-heading">2. Code Issues &amp; Diagnostics</h4>
+                                <div id="coach-issues-list" class="coach-issues-list"></div>
+                            </div>
+
+                            <!-- 3. Suggestions Section -->
+                            <div class="coach-section">
+                                <h4 class="coach-section-heading">3. Improvement Suggestions</h4>
+                                <div id="coach-suggestions-list" class="coach-suggestions-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- X-RAY PANEL -->
+            <div id="panel-xray" role="tabpanel" aria-labelledby="tab-xray" hidden>
+                <div class="notice error" role="alert" th:if="${!xrayEnabled}">
+                    <strong>Java X-Ray is disabled on this server.</strong>
+                    Set <code>xray.enabled=true</code> in <code>application.properties</code> (requires a JDK).
+                </div>
+
+                <!-- Status bar -->
+                <div id="xray-status-bar" class="xray-status-bar" role="status" aria-live="polite">
+                    <span id="xray-status-msg">Click <strong>🔬 Trace</strong> to start.</span>
+                    <span id="xray-step-badge" class="xray-step-badge" hidden></span>
+                </div>
+
+                <!-- Navigation controls -->
+                <div class="xray-nav" id="xray-nav" hidden>
+                    <button type="button" class="button xray-nav-btn" id="xray-first"  title="First step">⏮</button>
+                    <button type="button" class="button xray-nav-btn" id="xray-prev"   title="Previous step">◀</button>
+                    <span id="xray-pos" class="xray-pos">Step 0 / 0</span>
+                    <button type="button" class="button xray-nav-btn" id="xray-next"   title="Next step">▶</button>
+                    <button type="button" class="button xray-nav-btn" id="xray-last"   title="Last step">⏭</button>
+                </div>
+
+                <!-- Main inspector grid -->
+                <div class="xray-grid" id="xray-grid" hidden>
+                    <!-- Variables -->
+                    <section class="xray-panel" id="xray-vars-panel" aria-labelledby="xray-vars-title">
+                        <h3 id="xray-vars-title" class="xray-panel-title">Variables</h3>
+                        <div class="xray-panel-body" id="xray-vars">
+                            <p class="xray-empty">No variables yet.</p>
+                        </div>
+                    </section>
+
+                    <!-- Call Stack -->
+                    <section class="xray-panel" id="xray-stack-panel" aria-labelledby="xray-stack-title">
+                        <h3 id="xray-stack-title" class="xray-panel-title">Call Stack</h3>
+                        <div class="xray-panel-body" id="xray-stack">
+                            <p class="xray-empty">No frames yet.</p>
+                        </div>
+                    </section>
+
+                    <!-- Objects / References -->
+                    <section class="xray-panel xray-span2" id="xray-objects-panel" aria-labelledby="xray-objects-title">
+                        <h3 id="xray-objects-title" class="xray-panel-title">Objects &amp; References</h3>
+                        <div class="xray-panel-body" id="xray-objects">
+                            <p class="xray-empty">No objects yet.</p>
+                        </div>
+                    </section>
+
+                    <!-- Console output -->
+                    <section class="xray-panel xray-span2" id="xray-console-panel" aria-labelledby="xray-console-title">
+                        <h3 id="xray-console-title" class="xray-panel-title">Console Output</h3>
+                        <pre class="xray-console" id="xray-console"><span class="xray-empty">No output yet.</span></pre>
+                    </section>
+                </div>
+
+                <!-- Execution timeline -->
+                <section class="xray-timeline-section" id="xray-timeline-section" hidden>
+                    <h3 class="xray-panel-title">Execution Timeline</h3>
+                    <div class="xray-timeline" id="xray-timeline" role="list"
+                         aria-label="Execution steps"></div>
+                </section>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- AI ASSISTANT PANEL                                           -->
+            <!-- ============================================================ -->
+            <div id="panel-ai" role="tabpanel" aria-labelledby="tab-ai" hidden>
+                <div class="ai-card">
+                    <div class="ai-header">
+                        <div class="ai-title-wrap">
+                            <span class="ai-icon">🤖</span>
+                            <div>
+                                <h3 class="ai-title">Java AI Assistant</h3>
+                                <p class="ai-subtitle">Ask questions, generate Java code, and fix errors</p>
+                            </div>
+                        </div>
+                        <button type="button" class="button subtle small" id="ai-clear-btn" title="Clear conversation history">New Chat</button>
+                    </div>
+
+                    <!-- Unavailable notice if not configured -->
+                    <div class="notice" id="ai-notice-unconfigured" th:if="${!aiConfigured}">
+                        <strong>AI Assistant is not configured on this server.</strong>
+                        <p class="small muted" style="margin-top:0.4rem; margin-bottom:0;">
+                            To enable, provide a <code>GEMINI_API_KEY</code> (free tier) in your environment or set
+                            <code>OPENAI_API_KEY</code> / <code>GROQ_API_KEY</code> in <code>application.properties</code>.
+                        </p>
+                    </div>
+
+                    <!-- Quick Action Chips -->
+                    <div class="ai-chips">
+                        <button type="button" class="ai-chip" id="ai-chip-explain">📖 Explain Code</button>
+                        <button type="button" class="ai-chip" id="ai-chip-fix">🔧 Fix Errors</button>
+                        <button type="button" class="ai-chip" id="ai-chip-generate">⚡ Generate Code</button>
+                    </div>
+
+                    <!-- Chat conversation scroll area -->
+                    <div class="ai-chat-area" id="ai-chat-area" aria-live="polite">
+                        <div class="ai-msg ai-msg-system">
+                            <p>Hello! I can explain Java concepts, write sample programs, or debug compiler and runtime errors from your editor.</p>
+                        </div>
+                    </div>
+
+                    <!-- AI Input Form -->
+                    <form class="ai-input-form" id="ai-form" onsubmit="return false;">
+                        <textarea class="ai-input" id="ai-prompt" rows="2" placeholder="Ask a Java question or describe what to generate..." aria-label="Ask Java AI Assistant"></textarea>
+                        <div class="ai-input-bar">
+                            <span class="ai-privacy-hint muted small">Code in editor is sent as context. Never submit secret keys.</span>
+                            <button type="button" class="button primary" id="ai-send-btn">Send</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{pages :: footer}"></footer>
+<script th:src="@{/js/sandbox.js(v=${#dates.createNow().getTime()})}"></script>
+<script th:src="@{/js/xray.js(v=${#dates.createNow().getTime()})}"></script>
+</body>
+</html>

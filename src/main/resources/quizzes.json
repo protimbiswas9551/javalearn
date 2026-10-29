@@ -1,0 +1,1154 @@
+{
+ "introduction": [
+  {
+   "type": "mcq",
+   "q": "Which tool turns a .java source file into bytecode?",
+   "options": [
+    "java",
+    "javac",
+    "javadoc",
+    "jar"
+   ],
+   "answer": 1,
+   "explanation": "javac is the compiler. The java command runs the compiled bytecode."
+  },
+  {
+   "type": "mcq",
+   "q": "What does the Java Virtual Machine (JVM) run?",
+   "options": [
+    "Source code (.java)",
+    "Bytecode (.class)",
+    "Machine code for one CPU only",
+    "HTML files"
+   ],
+   "answer": 1,
+   "explanation": "The compiler produces bytecode in .class files and the JVM runs it, which is why Java programs run on many systems."
+  },
+  {
+   "type": "mcq",
+   "q": "Which method is the starting point of a Java program?",
+   "options": [
+    "public static void main(String[] args)",
+    "public void start()",
+    "static int main()",
+    "void run(String args)"
+   ],
+   "answer": 0,
+   "explanation": "The JVM looks for exactly this signature to start the program."
+  },
+  {
+   "type": "blank",
+   "q": "Complete the line so it prints Hello and moves to a new line.",
+   "code": "System.out.___(\"Hello\");",
+   "answer": [
+    "println"
+   ],
+   "explanation": "println prints the text and then starts a new line."
+  },
+  {
+   "type": "blank",
+   "q": "Complete the main method header.",
+   "code": "public ___ void main(String[] args) { }",
+   "answer": [
+    "static"
+   ],
+   "explanation": "main must be static so the JVM can call it without creating an object."
+  }
+ ],
+ "variables-and-data-types": [
+  {
+   "type": "mcq",
+   "q": "Which data type stores only true or false?",
+   "options": [
+    "int",
+    "String",
+    "boolean",
+    "char"
+   ],
+   "answer": 2,
+   "explanation": "boolean holds true or false."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "3.5",
+    "3",
+    "4",
+    "3.0"
+   ],
+   "answer": 1,
+   "explanation": "Both operands are int, so the division is integer division and the decimal part is dropped.",
+   "code": "int x = 7 / 2;\nSystem.out.println(x);"
+  },
+  {
+   "type": "mcq",
+   "q": "Which declaration is valid Java?",
+   "options": [
+    "int 2count = 5;",
+    "String name = \"Ava\";",
+    "char c = \"a\";",
+    "boolean b = 1;"
+   ],
+   "answer": 1,
+   "explanation": "Names cannot start with a digit, a char needs single quotes, and a boolean cannot hold 1."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the type for a decimal number.",
+   "code": "___ price = 9.99;",
+   "answer": [
+    "double"
+   ],
+   "explanation": "9.99 is a double literal. A float would need the suffix f."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the type for text.",
+   "code": "___ name = \"Sam\";",
+   "answer": [
+    "String"
+   ],
+   "explanation": "Text is stored in a String. Java is case-sensitive, so it is String with a capital S."
+  }
+ ],
+ "operators": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "3",
+    "1",
+    "0",
+    "3.33"
+   ],
+   "answer": 1,
+   "explanation": "% gives the remainder: 10 divided by 3 is 3 with remainder 1.",
+   "code": "int a = 10, b = 3;\nSystem.out.println(a % b);"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "13",
+    "8x53",
+    "8x8",
+    "x53"
+   ],
+   "answer": 1,
+   "explanation": "Evaluation goes left to right: 5 + 3 is 8, then the String joins the rest as text: 8x53.",
+   "code": "System.out.println(5 + 3 + \"x\" + 5 + 3);"
+  },
+  {
+   "type": "mcq",
+   "q": "Which operator means logical AND?",
+   "options": [
+    "||",
+    "&&",
+    "!",
+    "=="
+   ],
+   "answer": 1,
+   "explanation": "&& is true only when both conditions are true."
+  },
+  {
+   "type": "blank",
+   "q": "Add 5 to x using a compound assignment operator.",
+   "code": "int x = 1;\nx ___ 5;",
+   "answer": [
+    "+="
+   ],
+   "explanation": "x += 5 means x = x + 5."
+  },
+  {
+   "type": "blank",
+   "q": "Both conditions must be true. Fill in the operator.",
+   "code": "int a = 5, b = 2;\nboolean ok = (a > 3) ___ (b < 9);",
+   "answer": [
+    "&&",
+    "&"
+   ],
+   "explanation": "&& (logical AND) is true only if both sides are true."
+  }
+ ],
+ "input-output": [
+  {
+   "type": "mcq",
+   "q": "Which class is used to read what the user types on the keyboard?",
+   "options": [
+    "Scanner",
+    "Printer",
+    "Reader2",
+    "Console2"
+   ],
+   "answer": 0,
+   "explanation": "Scanner (from java.util) reads input from System.in."
+  },
+  {
+   "type": "mcq",
+   "q": "Which Scanner method reads a whole line of text?",
+   "options": [
+    "next()",
+    "nextInt()",
+    "nextLine()",
+    "readAll()"
+   ],
+   "answer": 2,
+   "explanation": "nextLine() reads up to the end of the line. next() reads one word."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "JavaLearn",
+    "Java Learn",
+    "Java\nLearn",
+    "Learn Java"
+   ],
+   "answer": 0,
+   "explanation": "print() does not add a space or a new line.",
+   "code": "System.out.print(\"Java\");\nSystem.out.print(\"Learn\");"
+  },
+  {
+   "type": "blank",
+   "q": "Create a Scanner that reads from the keyboard.",
+   "code": "Scanner sc = new Scanner(System.___);",
+   "answer": [
+    "in"
+   ],
+   "explanation": "System.in is the keyboard input stream."
+  },
+  {
+   "type": "blank",
+   "q": "Read an integer.",
+   "code": "Scanner sc = new Scanner(System.in);\nint age = sc.___();",
+   "answer": [
+    "nextInt"
+   ],
+   "explanation": "nextInt() reads the next whole number."
+  }
+ ],
+ "conditions": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "big",
+    "medium",
+    "small",
+    "bigmedium"
+   ],
+   "answer": 0,
+   "explanation": "15 > 10 is true, so only the first branch runs.",
+   "code": "int n = 15;\nif (n > 10) {\n    System.out.print(\"big\");\n} else if (n > 5) {\n    System.out.print(\"medium\");\n} else {\n    System.out.print(\"small\");\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed? (Hint: look for break.)",
+   "options": [
+    "two",
+    "twothree",
+    "onetwothree",
+    "twothreeother"
+   ],
+   "answer": 1,
+   "explanation": "case 2 has no break, so execution falls through into case 3, which has a break.",
+   "code": "int day = 2;\nswitch (day) {\n    case 1: System.out.print(\"one\");\n    case 2: System.out.print(\"two\");\n    case 3: System.out.print(\"three\"); break;\n    default: System.out.print(\"other\");\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "Which condition correctly checks whether x equals 5?",
+   "options": [
+    "if (x = 5)",
+    "if (x == 5)",
+    "if x == 5",
+    "if (x === 5)"
+   ],
+   "answer": 1,
+   "explanation": "== compares values. A single = assigns, and Java needs parentheses and has no ===."
+  },
+  {
+   "type": "blank",
+   "q": "Complete the missing keyword.",
+   "code": "int score = 40;\nif (score >= 50) {\n    System.out.println(\"Pass\");\n} ___ {\n    System.out.println(\"Fail\");\n}",
+   "answer": [
+    "else"
+   ],
+   "explanation": "else runs when the if condition is false."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the statement that selects between many cases.",
+   "code": "int day = 1;\n___ (day) {\n    case 1: System.out.println(\"Mon\"); break;\n    default: System.out.println(\"Other\");\n}",
+   "answer": [
+    "switch"
+   ],
+   "explanation": "switch chooses a case based on one value."
+  }
+ ],
+ "loops": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "1 2 3",
+    "0 1 2",
+    "1 2 3 4",
+    "3 2 1"
+   ],
+   "answer": 0,
+   "explanation": "i starts at 1 and the loop runs while i <= 3.",
+   "code": "for (int i = 1; i <= 3; i++) {\n    System.out.print(i + \" \");\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Nothing",
+    "x",
+    "xxxxx",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "A do-while checks its condition after the body, so the body runs once even though 10 < 5 is false.",
+   "code": "int i = 10;\ndo {\n    System.out.print(\"x\");\n    i++;\n} while (i < 5);"
+  },
+  {
+   "type": "mcq",
+   "q": "Which loop always runs its body at least once?",
+   "options": [
+    "for",
+    "while",
+    "do-while",
+    "for-each"
+   ],
+   "answer": 2,
+   "explanation": "do-while tests the condition after running the body."
+  },
+  {
+   "type": "blank",
+   "q": "Make the loop count up by one each time.",
+   "code": "for (int i = 0; i < 5; ___) {\n    System.out.println(i);\n}",
+   "answer": [
+    "i++",
+    "++i",
+    "i += 1",
+    "i+=1"
+   ],
+   "explanation": "i++ adds one to i after every round."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the loop that repeats while a condition is true.",
+   "code": "int count = 0;\n___ (count < 3) {\n    count++;\n}",
+   "answer": [
+    "while"
+   ],
+   "explanation": "while repeats as long as its condition is true."
+  }
+ ],
+ "arrays": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "3",
+    "8",
+    "15",
+    "14"
+   ],
+   "answer": 2,
+   "explanation": "The last index is length - 1, which is 2, and numbers[2] is 15.",
+   "code": "int[] numbers = {4, 8, 15};\nSystem.out.println(numbers[numbers.length - 1]);"
+  },
+  {
+   "type": "mcq",
+   "q": "What is the index of the first element of an array?",
+   "options": [
+    "0",
+    "1",
+    "-1",
+    "It depends on the type"
+   ],
+   "answer": 0,
+   "explanation": "Java arrays are zero-based."
+  },
+  {
+   "type": "mcq",
+   "q": "What happens when this code runs?",
+   "options": [
+    "It stores 1 at the end",
+    "It prints 0",
+    "ArrayIndexOutOfBoundsException",
+    "It does not compile"
+   ],
+   "answer": 2,
+   "explanation": "Valid indexes are 0, 1 and 2. Index 3 is outside the array, which fails at run time.",
+   "code": "int[] n = new int[3];\nn[3] = 1;"
+  },
+  {
+   "type": "blank",
+   "q": "Create an array of five ints.",
+   "code": "int[] scores = new ___[5];",
+   "answer": [
+    "int"
+   ],
+   "explanation": "new int[5] creates an array that holds five ints."
+  },
+  {
+   "type": "blank",
+   "q": "Loop over every element.",
+   "code": "int[] scores = new int[5];\nfor (int i = 0; i < scores.___; i++) {\n    System.out.println(scores[i]);\n}",
+   "answer": [
+    "length"
+   ],
+   "explanation": "length (no parentheses) is the number of elements in an array."
+  }
+ ],
+ "strings": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "H",
+    "e",
+    "l",
+    "Hello"
+   ],
+   "answer": 1,
+   "explanation": "charAt(1) returns the character at index 1. Index 0 is H.",
+   "code": "String s = \"Hello\";\nSystem.out.println(s.charAt(1));"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "hi",
+    "HI",
+    "Hi",
+    "Nothing"
+   ],
+   "answer": 0,
+   "explanation": "Strings are immutable. toUpperCase() returns a new String, and the result was thrown away.",
+   "code": "String s = \"hi\";\ns.toUpperCase();\nSystem.out.println(s);"
+  },
+  {
+   "type": "mcq",
+   "q": "Which is the correct way to compare the text of two Strings?",
+   "options": [
+    "a == b",
+    "a.equals(b)",
+    "a = b",
+    "a.same(b)"
+   ],
+   "answer": 1,
+   "explanation": "equals() compares the characters. == compares whether both are the same object."
+  },
+  {
+   "type": "blank",
+   "q": "Convert the text to capital letters.",
+   "code": "String name = \"ava\";\nString upper = name.___();",
+   "answer": [
+    "toUpperCase"
+   ],
+   "explanation": "toUpperCase() returns the capitalised copy."
+  },
+  {
+   "type": "blank",
+   "q": "Split the text at each comma.",
+   "code": "String text = \"a,b,c\";\nString[] parts = text.___(\",\");",
+   "answer": [
+    "split"
+   ],
+   "explanation": "split() returns an array of the pieces."
+  }
+ ],
+ "methods": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "5",
+    "10",
+    "23",
+    "6"
+   ],
+   "answer": 1,
+   "explanation": "add(2, 3) returns 5, and 5 * 2 is 10.",
+   "code": "static int add(int a, int b) {\n    return a + b;\n}\n\npublic static void main(String[] args) {\n    System.out.println(add(2, 3) * 2);\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "99",
+    "5",
+    "0",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "Java passes a copy of a primitive value, so changing x inside the method does not change n.",
+   "code": "static void change(int x) {\n    x = 99;\n}\n\npublic static void main(String[] args) {\n    int n = 5;\n    change(n);\n    System.out.println(n);\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What does the return type void mean?",
+   "options": [
+    "The method returns 0",
+    "The method returns nothing",
+    "The method cannot be called",
+    "The method returns a String"
+   ],
+   "answer": 1,
+   "explanation": "A void method does its work but gives no value back."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the return type.",
+   "code": "static ___ square(int n) {\n    return n * n;\n}",
+   "answer": [
+    "int"
+   ],
+   "explanation": "n * n is an int, so the method returns int."
+  },
+  {
+   "type": "blank",
+   "q": "Choose the return type of a method that returns nothing.",
+   "code": "static ___ sayHi() {\n    System.out.println(\"Hi\");\n}",
+   "answer": [
+    "void"
+   ],
+   "explanation": "void means no return value."
+  }
+ ],
+ "classes-and-objects": [
+  {
+   "type": "mcq",
+   "q": "What is the relationship between a class and an object?",
+   "options": [
+    "An object is a blueprint for classes",
+    "A class is a blueprint and an object is one thing made from it",
+    "They are the same",
+    "A class is created from an object at run time"
+   ],
+   "answer": 1,
+   "explanation": "A class describes fields and methods. Each object created with new is one instance of it."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "50",
+    "80",
+    "0",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "c1 and c2 refer to the same Car object, so changing speed through c2 is visible through c1.",
+   "code": "class Car {\n    int speed;\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Car c1 = new Car();\n        c1.speed = 50;\n        Car c2 = c1;\n        c2.speed = 80;\n        System.out.println(c1.speed);\n    }\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "Which line creates a Dog object?",
+   "options": [
+    "Dog d = new Dog();",
+    "Dog d = Dog();",
+    "new Dog d;",
+    "Dog d = create Dog();"
+   ],
+   "answer": 0,
+   "explanation": "Objects are created with the new keyword and a constructor call."
+  },
+  {
+   "type": "blank",
+   "q": "Create the object.",
+   "code": "class Dog {\n    void bark() { System.out.println(\"Woof\"); }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Dog d = ___ Dog();\n        d.bark();\n    }\n}",
+   "answer": [
+    "new"
+   ],
+   "explanation": "new allocates the object and calls its constructor."
+  },
+  {
+   "type": "blank",
+   "q": "Call the method of the object.",
+   "code": "class Dog {\n    void bark() { System.out.println(\"Woof\"); }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Dog d = new Dog();\n        d.___();\n    }\n}",
+   "answer": [
+    "bark"
+   ],
+   "explanation": "Use the dot operator and the method name with parentheses."
+  }
+ ],
+ "constructors": [
+  {
+   "type": "mcq",
+   "q": "Which statement about a constructor is true?",
+   "options": [
+    "It has the same name as the class and no return type",
+    "It must be declared void",
+    "It has any name you like",
+    "It is called with the dot operator"
+   ],
+   "answer": 0,
+   "explanation": "A constructor shares the class name and has no return type, not even void."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Java",
+    "null",
+    "Book",
+    "It does not compile"
+   ],
+   "answer": 0,
+   "explanation": "The constructor stores the argument in the title field.",
+   "code": "class Book {\n    String title;\n    Book(String title) {\n        this.title = title;\n    }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Book b = new Book(\"Java\");\n        System.out.println(b.title);\n    }\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What happens with this code?",
+   "options": [
+    "It prints null",
+    "A compile-time error, because Book has no constructor without parameters",
+    "A run-time error",
+    "It prints 0"
+   ],
+   "answer": 1,
+   "explanation": "Once you write any constructor, Java no longer provides the default one. new Book() has nothing to call.",
+   "code": "class Book {\n    Book(String title) { }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Book b = new Book();\n    }\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Refer to the field of the current object.",
+   "code": "class Book {\n    String title;\n    Book(String title) {\n        ___.title = title;\n    }\n}",
+   "answer": [
+    "this"
+   ],
+   "explanation": "this.title is the field, title alone is the parameter."
+  },
+  {
+   "type": "blank",
+   "q": "Write the constructor name.",
+   "code": "class Student {\n    String name;\n    ___(String name) {\n        this.name = name;\n    }\n}",
+   "answer": [
+    "Student"
+   ],
+   "explanation": "The constructor name must match the class name exactly."
+  }
+ ],
+ "encapsulation": [
+  {
+   "type": "mcq",
+   "q": "Which keyword hides a field so it can only be used inside its own class?",
+   "options": [
+    "public",
+    "private",
+    "static",
+    "final"
+   ],
+   "answer": 1,
+   "explanation": "private limits access to the class itself."
+  },
+  {
+   "type": "mcq",
+   "q": "Why do we usually put checks inside a setter method?",
+   "options": [
+    "To make the program run faster",
+    "To control which values are allowed",
+    "To make the field public",
+    "Setters are required by the compiler"
+   ],
+   "answer": 1,
+   "explanation": "A setter can reject invalid values so the object always stays in a valid state."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "75.0",
+    "125.0",
+    "100.0",
+    "-50.0"
+   ],
+   "answer": 1,
+   "explanation": "deposit(-50) is rejected by the check, so only 25 is added.",
+   "code": "class Account {\n    private double balance = 100;\n\n    public void deposit(double amount) {\n        if (amount > 0) {\n            balance += amount;\n        }\n    }\n\n    public double getBalance() {\n        return balance;\n    }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Account a = new Account();\n        a.deposit(-50);\n        a.deposit(25);\n        System.out.println(a.getBalance());\n    }\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Make the field accessible only inside the class.",
+   "code": "class Account {\n    ___ double balance;\n}",
+   "answer": [
+    "private"
+   ],
+   "explanation": "private is the access level that hides a field from other classes."
+  },
+  {
+   "type": "blank",
+   "q": "Complete the getter for the balance field.",
+   "code": "class Account {\n    private double balance;\n    public double ___() {\n        return balance;\n    }\n}",
+   "answer": [
+    "getBalance"
+   ],
+   "explanation": "By convention a getter is named get followed by the field name."
+  }
+ ],
+ "inheritance": [
+  {
+   "type": "mcq",
+   "q": "Which keyword makes one class inherit from another?",
+   "options": [
+    "implements",
+    "extends",
+    "inherits",
+    "super"
+   ],
+   "answer": 1,
+   "explanation": "class Dog extends Animal makes Dog a subclass of Animal."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "eating",
+    "Dog",
+    "Nothing",
+    "It does not compile"
+   ],
+   "answer": 0,
+   "explanation": "Dog inherits eat() from Animal.",
+   "code": "class Animal {\n    void eat() { System.out.println(\"eating\"); }\n}\n\nclass Dog extends Animal { }\n\npublic class Main {\n    public static void main(String[] args) {\n        new Dog().eat();\n    }\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Child Parent",
+    "Parent Child",
+    "Parent",
+    "Child"
+   ],
+   "answer": 1,
+   "explanation": "The parent constructor runs first, then the child constructor body.",
+   "code": "class Parent {\n    Parent() { System.out.print(\"Parent \"); }\n}\n\nclass Child extends Parent {\n    Child() { System.out.print(\"Child\"); }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        new Child();\n    }\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Inherit from Animal.",
+   "code": "class Animal { }\nclass Dog ___ Animal { }",
+   "answer": [
+    "extends"
+   ],
+   "explanation": "extends creates the subclass relationship."
+  },
+  {
+   "type": "blank",
+   "q": "Call the parent version of eat().",
+   "code": "class Animal {\n    void eat() { System.out.println(\"eating\"); }\n}\n\nclass Dog extends Animal {\n    void eat() {\n        ___.eat();\n        System.out.println(\"Dog food\");\n    }\n}",
+   "answer": [
+    "super"
+   ],
+   "explanation": "super refers to the parent class."
+  }
+ ],
+ "polymorphism": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Animal sound",
+    "Woof",
+    "Nothing",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "The method that runs depends on the real object (a Dog), not on the variable type.",
+   "code": "class Animal {\n    void sound() { System.out.println(\"Animal sound\"); }\n}\n\nclass Dog extends Animal {\n    @Override\n    void sound() { System.out.println(\"Woof\"); }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Animal a = new Dog();\n        a.sound();\n    }\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "Two methods in the same class have the same name but different parameter lists. What is this called?",
+   "options": [
+    "Overriding",
+    "Overloading",
+    "Inheritance",
+    "Encapsulation"
+   ],
+   "answer": 1,
+   "explanation": "Overloading: same name, different parameters. Overriding: a subclass replaces a parent method."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "int",
+    "String",
+    "int String",
+    "It does not compile"
+   ],
+   "answer": 0,
+   "explanation": "Java picks the overload whose parameter type matches the argument 5.",
+   "code": "static void print(int n) { System.out.println(\"int\"); }\nstatic void print(String s) { System.out.println(\"String\"); }\n\npublic static void main(String[] args) {\n    print(5);\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Mark the method as overriding the parent method.",
+   "code": "class Animal { void sound() { } }\nclass Dog extends Animal {\n    @___\n    void sound() { }\n}",
+   "answer": [
+    "Override"
+   ],
+   "explanation": "@Override asks the compiler to check that you really override a parent method."
+  },
+  {
+   "type": "blank",
+   "q": "Store a Dog object in an Animal variable.",
+   "code": "class Animal { }\nclass Dog extends Animal { }\n\npublic class Main {\n    public static void main(String[] args) {\n        Animal a = new ___();\n    }\n}",
+   "answer": [
+    "Dog"
+   ],
+   "explanation": "A subclass object can be stored in a variable of its parent type."
+  }
+ ],
+ "abstraction": [
+  {
+   "type": "mcq",
+   "q": "What can you NOT do with an abstract class?",
+   "options": [
+    "Extend it",
+    "Create an object of it with new",
+    "Add normal methods to it",
+    "Add fields to it"
+   ],
+   "answer": 1,
+   "explanation": "An abstract class is incomplete, so it cannot be instantiated directly."
+  },
+  {
+   "type": "mcq",
+   "q": "What does an abstract method look like?",
+   "options": [
+    "It has a body in braces",
+    "It has no body and ends with a semicolon",
+    "It is always private",
+    "It must be static"
+   ],
+   "answer": 1,
+   "explanation": "An abstract method only declares the signature. Subclasses provide the body."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "12",
+    "12.0",
+    "7.0",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "area() returns a double, so 3 * 4 prints as 12.0.",
+   "code": "abstract class Shape {\n    abstract double area();\n}\n\nclass Rectangle extends Shape {\n    double w, h;\n    Rectangle(double w, double h) { this.w = w; this.h = h; }\n    double area() { return w * h; }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Shape s = new Rectangle(3, 4);\n        System.out.println(s.area());\n    }\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Declare an abstract class.",
+   "code": "___ class Shape { }",
+   "answer": [
+    "abstract"
+   ],
+   "explanation": "abstract marks a class that cannot be instantiated."
+  },
+  {
+   "type": "blank",
+   "q": "End the abstract method declaration.",
+   "code": "abstract class Shape {\n    abstract double area()___\n}",
+   "answer": [
+    ";"
+   ],
+   "explanation": "An abstract method has no body, so the line ends with a semicolon."
+  }
+ ],
+ "interfaces": [
+  {
+   "type": "mcq",
+   "q": "Which keyword does a class use to follow an interface?",
+   "options": [
+    "extends",
+    "implements",
+    "uses",
+    "inherits"
+   ],
+   "answer": 1,
+   "explanation": "class Card implements Payable promises to provide the interface methods."
+  },
+  {
+   "type": "mcq",
+   "q": "Can one class implement more than one interface?",
+   "options": [
+    "Yes, separated by commas",
+    "No, only one",
+    "Only if they are empty",
+    "Only in abstract classes"
+   ],
+   "answer": 0,
+   "explanation": "class A implements X, Y is allowed, unlike extending several classes."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Hello",
+    "Greeter",
+    "English",
+    "It does not compile"
+   ],
+   "answer": 0,
+   "explanation": "g holds an English object, so greet() from English runs.",
+   "code": "interface Greeter {\n    String greet();\n}\n\nclass English implements Greeter {\n    public String greet() { return \"Hello\"; }\n}\n\npublic class Main {\n    public static void main(String[] args) {\n        Greeter g = new English();\n        System.out.println(g.greet());\n    }\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Follow the interface.",
+   "code": "interface Payable { void pay(double amount); }\nclass Card ___ Payable {\n    public void pay(double amount) { }\n}",
+   "answer": [
+    "implements"
+   ],
+   "explanation": "implements links a class to an interface."
+  },
+  {
+   "type": "blank",
+   "q": "Interface methods are public, so the implementation must be too.",
+   "code": "interface Payable { void pay(double amount); }\nclass Card implements Payable {\n    ___ void pay(double amount) { }\n}",
+   "answer": [
+    "public"
+   ],
+   "explanation": "Without public the class would try to reduce the visibility, which is a compile error."
+  }
+ ],
+ "exception-handling": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Error",
+    "ErrorDone",
+    "Done",
+    "ErrorDone then a crash"
+   ],
+   "answer": 1,
+   "explanation": "10 / 0 throws ArithmeticException, the catch block prints Error, and finally always runs.",
+   "code": "try {\n    int r = 10 / 0;\n} catch (ArithmeticException e) {\n    System.out.print(\"Error\");\n} finally {\n    System.out.print(\"Done\");\n}"
+  },
+  {
+   "type": "mcq",
+   "q": "When does a finally block run?",
+   "options": [
+    "Only if an exception happens",
+    "Only if no exception happens",
+    "Whether or not an exception happens",
+    "Never automatically"
+   ],
+   "answer": 2,
+   "explanation": "finally is for clean-up that must always happen."
+  },
+  {
+   "type": "mcq",
+   "q": "Which keyword throws an exception yourself?",
+   "options": [
+    "throw",
+    "throws",
+    "catch",
+    "try"
+   ],
+   "answer": 0,
+   "explanation": "throw creates and throws the exception. throws only declares that a method might throw one."
+  },
+  {
+   "type": "blank",
+   "q": "Handle a NumberFormatException.",
+   "code": "try {\n    Integer.parseInt(\"abc\");\n} ___ (NumberFormatException e) {\n    System.out.println(\"Not a number\");\n}",
+   "answer": [
+    "catch"
+   ],
+   "explanation": "A catch block handles the exception type in parentheses."
+  },
+  {
+   "type": "blank",
+   "q": "Signal an invalid argument with the standard exception.",
+   "code": "int age = -1;\nif (age < 0) {\n    throw new ___(\"Invalid age\");\n}",
+   "answer": [
+    "IllegalArgumentException"
+   ],
+   "explanation": "IllegalArgumentException is the standard choice for a bad argument value."
+  }
+ ],
+ "collections": [
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "[a, b, c]",
+    "[b, c]",
+    "[a, c]",
+    "[b]"
+   ],
+   "answer": 1,
+   "explanation": "remove(0) removes the element at index 0, which is a.",
+   "code": "ArrayList<String> list = new ArrayList<>();\nlist.add(\"a\");\nlist.add(\"b\");\nlist.add(\"c\");\nlist.remove(0);\nSystem.out.println(list);"
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "4",
+    "3",
+    "2",
+    "It does not compile"
+   ],
+   "answer": 1,
+   "explanation": "A HashSet ignores duplicates, so the second 2 is not stored.",
+   "code": "HashSet<Integer> set = new HashSet<>();\nset.add(1);\nset.add(2);\nset.add(2);\nset.add(3);\nSystem.out.println(set.size());"
+  },
+  {
+   "type": "mcq",
+   "q": "What does a HashMap store?",
+   "options": [
+    "Only unique values in order",
+    "Key-value pairs with unique keys",
+    "Only numbers",
+    "Fixed-size arrays"
+   ],
+   "answer": 1,
+   "explanation": "A map finds a value quickly through its key."
+  },
+  {
+   "type": "blank",
+   "q": "Create an ArrayList object.",
+   "code": "ArrayList<String> names = new ___<>();",
+   "answer": [
+    "ArrayList"
+   ],
+   "explanation": "The type on the right of new is the class being created."
+  },
+  {
+   "type": "blank",
+   "q": "Add a key and value to the map.",
+   "code": "HashMap<String, Integer> map = new HashMap<>();\nmap.___(\"Ava\", 90);",
+   "answer": [
+    "put"
+   ],
+   "explanation": "put(key, value) stores or replaces an entry."
+  }
+ ],
+ "file-handling": [
+  {
+   "type": "mcq",
+   "q": "Why use try-with-resources when working with files?",
+   "options": [
+    "It makes the file bigger",
+    "It closes the file automatically",
+    "It skips error checks",
+    "It encrypts the file"
+   ],
+   "answer": 1,
+   "explanation": "Resources declared in the try parentheses are closed automatically, even if an exception occurs."
+  },
+  {
+   "type": "mcq",
+   "q": "Which kind of exception must you handle or declare when reading a file?",
+   "options": [
+    "IOException",
+    "ArithmeticException",
+    "NullPointerException",
+    "ClassCastException"
+   ],
+   "answer": 0,
+   "explanation": "IOException is a checked exception, so the compiler forces you to deal with it."
+  },
+  {
+   "type": "mcq",
+   "q": "What is printed?",
+   "options": [
+    "Hello",
+    "note.txt",
+    "null",
+    "Nothing"
+   ],
+   "answer": 0,
+   "explanation": "The text written to note.txt is read back by readLine().",
+   "code": "try (FileWriter fw = new FileWriter(\"note.txt\")) {\n    fw.write(\"Hello\");\n}\ntry (BufferedReader br = new BufferedReader(new FileReader(\"note.txt\"))) {\n    System.out.println(br.readLine());\n}"
+  },
+  {
+   "type": "blank",
+   "q": "Open the file for reading.",
+   "code": "try (BufferedReader br = new BufferedReader(new ___(\"notes.txt\"))) {\n    System.out.println(\"open\");\n}",
+   "answer": [
+    "FileReader"
+   ],
+   "explanation": "FileReader reads characters from a file, and BufferedReader wraps it."
+  },
+  {
+   "type": "blank",
+   "q": "Read one line.",
+   "code": "try (BufferedReader br = new BufferedReader(new FileReader(\"notes.txt\"))) {\n    String line = br.___();\n}",
+   "answer": [
+    "readLine"
+   ],
+   "explanation": "readLine() returns the next line, or null at the end of the file."
+  }
+ ],
+ "jdbc": [
+  {
+   "type": "mcq",
+   "q": "Which call opens a connection to a database?",
+   "options": [
+    "DriverManager.getConnection(url, user, password)",
+    "new Database(url)",
+    "Connection.open(url)",
+    "Statement.connect(url)"
+   ],
+   "answer": 0,
+   "explanation": "DriverManager.getConnection returns a Connection."
+  },
+  {
+   "type": "mcq",
+   "q": "What is the main benefit of a PreparedStatement with ? placeholders?",
+   "options": [
+    "It makes tables bigger",
+    "It helps prevent SQL injection",
+    "It removes the need for a driver",
+    "It works without a database"
+   ],
+   "answer": 1,
+   "explanation": "Values are sent separately from the SQL text, so user input cannot change the query."
+  },
+  {
+   "type": "mcq",
+   "q": "What does executeQuery() return?",
+   "options": [
+    "int",
+    "boolean",
+    "ResultSet",
+    "void"
+   ],
+   "answer": 2,
+   "explanation": "A ResultSet holds the rows returned by a SELECT."
+  },
+  {
+   "type": "blank",
+   "q": "Open the connection.",
+   "code": "String url = \"jdbc:mysql://localhost:3306/school\";\nConnection con = DriverManager.___(url, \"root\", \"secret\");",
+   "answer": [
+    "getConnection"
+   ],
+   "explanation": "getConnection is the DriverManager method that returns a Connection."
+  },
+  {
+   "type": "blank",
+   "q": "Move to the next row of the result.",
+   "code": "ResultSet rs = ps.executeQuery();\nwhile (rs.___()) {\n    System.out.println(rs.getString(\"name\"));\n}",
+   "answer": [
+    "next"
+   ],
+   "explanation": "next() moves to the next row and returns false when there are no more rows."
+  }
+ ]
+}
